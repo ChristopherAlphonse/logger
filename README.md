@@ -1,6 +1,6 @@
 # @calphonse/logger
 
-> A beautiful, intelligent logger for Node.js that makes debugging a joy 🎨✨
+> A beautiful, intelligent logger for Node.js that makes debugging a joy
 
 [![npm version](https://badge.fury.io/js/@calphonse%2Flogger.svg)](https://badge.fury.io/js/@calphonse%2Flogger)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
