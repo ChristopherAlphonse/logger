@@ -5,16 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2025-07-21
+
+### Fixed
+
+- **Dual Module Support**: Fixed CommonJS and ESM compatibility issues
+  - Resolved chalk import handling for both module systems
+  - Fixed method binding issues in exported logger instance
+  - Ensured proper `this` context preservation for logger methods
+
+### Added
+
+- **Multiple Import Patterns**: Support for various CommonJS import styles
+  - `const { logger } = require('@calphonse/logger')` (recommended)
+  - `const { logger, createLogger, LogLevel } = require('@calphonse/logger')`
+- **Enhanced Developer Experience**: Better TypeScript support and error handling
+
+## [1.0.2] - 2025-07-21
+
+### Fixed
+
+- Minor documentation and build improvements
+
 ## [1.0.1] - 2025-07-20
 
 ### Fixed
+
 - Resolved npm publication issues with initial release
 
 ## [1.0.0] - 2025-07-20
 
 ### Added
+
 - **Initial Release** - A beautiful, feature-rich logging library for Node.js applications
 - **Core Logging Features**:
+
   - Multiple log levels: ERROR, WARN, INFO, DEBUG, TRACE
   - Colored terminal output using chalk
   - Timestamp support with customizable format
@@ -23,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Custom prefixes for log organization
 
 - **Logger Configuration**:
+
   - Flexible configuration system with sensible defaults
   - Environment-aware settings
   - Custom output streams support
@@ -30,6 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Log level filtering
 
 - **Developer Experience**:
+
   - TypeScript-first design with full type safety
   - Comprehensive TSDoc documentation
   - IntelliSense support with parameter hints
@@ -37,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Familiar API similar to console.log
 
 - **Advanced Features**:
+
   - Child loggers with prefix inheritance
   - JSON output format for production environments
   - Circular reference protection
@@ -44,11 +72,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Performance-optimized conditional logging
 
 - **Factory Methods**:
+
   - `Logger.createJsonLogger()` - Production-ready JSON logging
   - `Logger.createMinimalLogger()` - Simple console output
   - `Logger.createVerboseLogger()` - Development debugging
 
 - **Convenience Functions**:
+
   - Global `log` object for quick logging
   - `createLogger()` factory function
   - `createChildLogger()` for module-specific logging
@@ -63,6 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Source maps for debugging
 
 ### Technical Details
+
 - **Bundle Size**: 18.07 kB (4.66 kB gzipped)
 - **Dependencies**: chalk ^5.3.0
 - **Node.js**: >=20.0.0
@@ -72,6 +103,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Build**: Vite with TypeScript declarations
 
 ### Documentation
+
 - Comprehensive README with usage examples
 - API reference with TSDoc comments
 - TypeScript declaration files
@@ -79,6 +111,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Development setup instructions
 
 ### Examples
+
 ```typescript
 // Basic usage
 import { logger } from '@calphonse/logger';
@@ -89,7 +122,7 @@ import { createLogger, LogLevel } from '@calphonse/logger';
 const logger = createLogger({
   level: LogLevel.DEBUG,
   prefix: 'API',
-  colors: true
+  colors: true,
 });
 
 // Child loggers
@@ -102,9 +135,11 @@ prodLogger.warn('High memory usage', { usage: '85%' });
 ```
 
 ### Breaking Changes
+
 - None (initial release)
 
 ### Migration Guide
+
 - N/A (initial release)
 
 ---
@@ -112,6 +147,7 @@ prodLogger.warn('High memory usage', { usage: '85%' });
 ## [Unreleased]
 
 ### Planned Features
+
 - Context management with correlation IDs
 - Enhanced error handling with user-friendly messages
 - Log filtering and search capabilities
@@ -124,5 +160,5 @@ prodLogger.warn('High memory usage', { usage: '85%' });
 - Performance optimizations
 
 ### Roadmap
-See [PRD](tasks/prd-logger-enhancement.md) for detailed 6-month development plan.
 
+See [PRD](tasks/prd-logger-enhancement.md) for detailed 6-month development plan.

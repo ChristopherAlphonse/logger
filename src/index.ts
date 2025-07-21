@@ -4,7 +4,8 @@ export type { LoggerConfig, LogEntry, ILogger, LogData } from './types';
 
 // Default logger instance
 import { Logger } from './logger';
-import type { LogData, LogLevel, LoggerConfig } from './types';
+import { LogLevel } from './types';
+import type { LogData, LoggerConfig } from './types';
 
 /**
  * Default logger instance with INFO level and sensible defaults.
@@ -14,13 +15,15 @@ import type { LogData, LogLevel, LoggerConfig } from './types';
  *
  * @example
  * ```typescript
- * import { logger } from '@calphonse/logger';
+ * import logger from '@calphonse/logger';
+ * // or
+ * const logger = require('@calphonse/logger');
  *
  * logger.info('Application started');
  * logger.error('Something went wrong', { errorCode: 'ERR001' });
  * ```
  */
-export const logger = new Logger();
+const defaultLogger = new Logger();
 
 /**
  * Convenience functions for quick logging using the default logger instance.
@@ -30,47 +33,49 @@ export const logger = new Logger();
  *
  * @example
  * ```typescript
- * import { log } from '@calphonse/logger';
+ * import logger from '@calphonse/logger';
+ * // or
+ * const logger = require('@calphonse/logger');
  *
- * log.info('User logged in', { userId: '12345' });
- * log.error('Database connection failed', { errorCode: 'DB001' });
+ * logger.log.info('User logged in', { userId: '12345' });
+ * logger.log.error('Database connection failed', { errorCode: 'DB001' });
  * ```
  */
-export const log = {
+const log = {
   /**
    * Log an error message with optional data
    * @param message - The error message to log
    * @param data - Optional metadata or additional details
    */
-  error: (message: string, data?: LogData) => logger.error(message, data),
+  error: (message: string, data?: LogData) => defaultLogger.error(message, data),
 
   /**
    * Log a warning message with optional data
    * @param message - The warning message to log
    * @param data - Optional metadata or additional details
    */
-  warn: (message: string, data?: LogData) => logger.warn(message, data),
+  warn: (message: string, data?: LogData) => defaultLogger.warn(message, data),
 
   /**
    * Log an info message with optional data
    * @param message - The info message to log
    * @param data - Optional metadata or additional details
    */
-  info: (message: string, data?: LogData) => logger.info(message, data),
+  info: (message: string, data?: LogData) => defaultLogger.info(message, data),
 
   /**
    * Log a debug message with optional data
    * @param message - The debug message to log
    * @param data - Optional metadata or additional details
    */
-  debug: (message: string, data?: LogData) => logger.debug(message, data),
+  debug: (message: string, data?: LogData) => defaultLogger.debug(message, data),
 
   /**
    * Log a trace message with optional data
    * @param message - The trace message to log
    * @param data - Optional metadata or additional details
    */
-  trace: (message: string, data?: LogData) => logger.trace(message, data),
+  trace: (message: string, data?: LogData) => defaultLogger.trace(message, data),
 };
 
 /**
@@ -84,10 +89,12 @@ export const log = {
  *
  * @example
  * ```typescript
- * import { createLogger, LogLevel } from '@calphonse/logger';
+ * import logger from '@calphonse/logger';
+ * // or
+ * const logger = require('@calphonse/logger');
  *
- * const customLogger = createLogger({
- *   level: LogLevel.DEBUG,
+ * const customLogger = logger.createLogger({
+ *   level: logger.LogLevel.DEBUG,
  *   prefix: 'API',
  *   colors: true,
  *   timestamps: true
@@ -96,7 +103,7 @@ export const log = {
  * customLogger.debug('Request received', { method: 'GET', path: '/users' });
  * ```
  */
-export const createLogger = (config?: Partial<LoggerConfig>) => new Logger(config);
+const createLogger = (config?: Partial<LoggerConfig>) => new Logger(config);
 
 /**
  * Create a child logger with a prefix using the default logger instance.
@@ -109,10 +116,12 @@ export const createLogger = (config?: Partial<LoggerConfig>) => new Logger(confi
  *
  * @example
  * ```typescript
- * import { createChildLogger } from '@calphonse/logger';
+ * import logger from '@calphonse/logger';
+ * // or
+ * const logger = require('@calphonse/logger');
  *
- * const dbLogger = createChildLogger('Database');
- * const apiLogger = createChildLogger('API');
+ * const dbLogger = logger.createChildLogger('Database');
+ * const apiLogger = logger.createChildLogger('API');
  *
  * dbLogger.info('Connection established');
  * apiLogger.info('Request processed');
@@ -122,7 +131,7 @@ export const createLogger = (config?: Partial<LoggerConfig>) => new Logger(confi
  * // [18:30:16] [API] [INFO] Request processed
  * ```
  */
-export const createChildLogger = (prefix: string) => logger.child(prefix);
+const createChildLogger = (prefix: string) => defaultLogger.child(prefix);
 
 /**
  * Set the log level for the default logger instance.
@@ -135,21 +144,23 @@ export const createChildLogger = (prefix: string) => logger.child(prefix);
  *
  * @example
  * ```typescript
- * import { setLogLevel, LogLevel, log } from '@calphonse/logger';
+ * import logger from '@calphonse/logger';
+ * // or
+ * const logger = require('@calphonse/logger');
  *
  * // Only show errors and warnings
- * setLogLevel(LogLevel.WARN);
+ * logger.setLogLevel(logger.LogLevel.WARN);
  *
- * log.info('This will not be shown'); // Hidden
- * log.warn('This will be shown');     // Visible
- * log.error('This will be shown');    // Visible
+ * logger.log.info('This will not be shown'); // Hidden
+ * logger.log.warn('This will be shown');     // Visible
+ * logger.log.error('This will be shown');    // Visible
  *
  * // Show all messages including debug
- * setLogLevel(LogLevel.DEBUG);
- * log.debug('Now debug messages are visible');
+ * logger.setLogLevel(logger.LogLevel.DEBUG);
+ * logger.log.debug('Now debug messages are visible');
  * ```
  */
-export const setLogLevel = (level: LogLevel) => logger.setLevel(level);
+const setLogLevel = (level: LogLevel) => defaultLogger.setLevel(level);
 
 /**
  * Configure the default logger instance with new settings.
@@ -162,37 +173,79 @@ export const setLogLevel = (level: LogLevel) => logger.setLevel(level);
  *
  * @example
  * ```typescript
- * import { configureLogger, LogLevel, log } from '@calphonse/logger';
+ * import logger from '@calphonse/logger';
+ * // or
+ * const logger = require('@calphonse/logger');
  *
  * // Enable JSON output for production
- * configureLogger({
+ * logger.configureLogger({
  *   json: true,
  *   colors: false,
- *   level: LogLevel.WARN
+ *   level: logger.LogLevel.WARN
  * });
  *
- * log.warn('Production warning');
+ * logger.log.warn('Production warning');
  * // Output: {"timestamp":"2024-01-15T18:30:00.000Z","level":"WARN","message":"Production warning"}
  *
  * // Switch back to human-readable format for development
- * configureLogger({
+ * logger.configureLogger({
  *   json: false,
  *   colors: true,
- *   level: LogLevel.DEBUG
+ *   level: logger.LogLevel.DEBUG
  * });
  * ```
  */
-export const configureLogger = (config: Partial<LoggerConfig>) => logger.setConfig(config);
+const configureLogger = (config: Partial<LoggerConfig>) => defaultLogger.setConfig(config);
+
+// Create the main export object that extends the logger instance with utility functions
+// We need to preserve the 'this' context for logger methods, so we can't use Object.assign
+const mainLogger = {
+  // Bind logger methods to preserve 'this' context
+  error: defaultLogger.error.bind(defaultLogger),
+  warn: defaultLogger.warn.bind(defaultLogger),
+  info: defaultLogger.info.bind(defaultLogger),
+  debug: defaultLogger.debug.bind(defaultLogger),
+  trace: defaultLogger.trace.bind(defaultLogger),
+  setLevel: defaultLogger.setLevel.bind(defaultLogger),
+  setConfig: defaultLogger.setConfig.bind(defaultLogger),
+  getConfig: defaultLogger.getConfig.bind(defaultLogger),
+  child: defaultLogger.child.bind(defaultLogger),
+  isEnabled: defaultLogger.isEnabled.bind(defaultLogger),
+
+  // Add utility functions
+  log: log,
+  createLogger,
+  createChildLogger,
+  setLogLevel,
+  configureLogger,
+  // Re-export types and enums for convenience
+  LogLevel,
+  Logger,
+};
+
+// Named exports for those who prefer them
+export const logger = mainLogger;
+export { log, createLogger, createChildLogger, setLogLevel, configureLogger };
 
 /**
- * Default export of the logger instance.
+ * Default export that provides the main logger instance with all utility functions.
  *
- * This is the same as the named export `logger`. You can use either:
+ * This allows both ESM and CommonJS users to access the logger directly:
  *
+ * ESM:
  * ```typescript
  * import logger from '@calphonse/logger';
- * // or
- * import { logger } from '@calphonse/logger';
+ * logger.info('Hello world');
+ * logger.log.error('Something went wrong');
+ * const custom = logger.createLogger({ level: logger.LogLevel.DEBUG });
+ * ```
+ *
+ * CommonJS:
+ * ```javascript
+ * const logger = require('@calphonse/logger');
+ * logger.info('Hello world');
+ * logger.log.error('Something went wrong');
+ * const custom = logger.createLogger({ level: logger.LogLevel.DEBUG });
  * ```
  */
-export default logger;
+export default mainLogger;

@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import chalkModule from 'chalk';
 import {
   type ChalkColor,
   type ILogger,
@@ -7,6 +7,9 @@ import {
   LogLevel,
   type LoggerConfig,
 } from './types';
+
+const chalk =
+  (chalkModule as typeof chalkModule & { default?: typeof chalkModule })?.default || chalkModule;
 
 /**
  * A customizable logger class that wraps console output with color support using chalk.
