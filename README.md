@@ -18,6 +18,9 @@ Tired of `console.log` chaos? This logger transforms your debugging experience w
 - **Developer-friendly** - Works great out of the box, highly configurable
 - **TypeScript first** - Full type safety and excellent IntelliSense
 
+
+![Logger Demo](examples/demo.png)
+
 ## Installation
 
 ```bash
@@ -321,7 +324,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Roadmap
 
-We're working on exciting new features! Check out our [6-month roadmap](tasks/prd-logger-enhancement.md) to see what's coming:
+We're working on exciting new features!:
 
 - **Smart Context Detection** - Automatic context inclusion
 - **Performance Monitoring** - Built-in performance insights
