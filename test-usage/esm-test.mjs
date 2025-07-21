@@ -1,0 +1,22 @@
+import logger from '@calphonse/logger';
+
+console.log('=== ESM Import Test ===');
+
+logger.info('This is an ESM import test - info message');
+logger.warn('This is a warning message');
+logger.error('This is an error message');
+logger.debug('This is a debug message');
+
+logger.log.info('Using logger.log.info from ESM');
+logger.log.error('Using logger.log.error from ESM');
+
+const customLogger = logger.createLogger({
+  level: logger.LogLevel.DEBUG,
+  prefix: 'CUSTOM',
+});
+customLogger.debug('Custom logger from ESM works!');
+
+const childLogger = logger.createChildLogger('CHILD');
+childLogger.info('Child logger from ESM works!');
+
+console.log('ESM test completed successfully!');

@@ -1,17 +1,26 @@
 {
   "name": "@calphonse/logger",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Colored logging utility with chalk for Node.js applications",
   "author": "Christopher Alphonse",
   "homepage": "https://github.com/ChristopherAlphonse/logger",
   "repository": "github:ChristopherAlphonse/logger",
   "license": "MIT",
-  "keywords": ["logger", "logging", "chalk", "colors", "console", "utility"],
+  "keywords": [
+    "logger",
+    "logging",
+    "chalk",
+    "colors",
+    "console",
+    "utility"
+  ],
   "main": "dist/index.cjs.js",
   "module": "dist/index.es.js",
   "types": "dist/index.d.ts",
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "tsc && vite build --watch",
     "build": "tsc && vite build",
@@ -58,5 +67,11 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "packageManager": "pnpm@8.15.0"
+  "packageManager": "pnpm@8.15.0",
+  "exports": {
+    ".": {
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.cjs.js"
+    }
+  }
 }
