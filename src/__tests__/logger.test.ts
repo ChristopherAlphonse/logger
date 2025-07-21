@@ -270,6 +270,171 @@ describe('Logger', () => {
       const longMessage = 'A'.repeat(10000);
       expect(() => testLogger.info(longMessage)).not.toThrow();
     });
+
+    test('should handle non-colored output for timestamps', () => {
+      const testLogger = new Logger({
+        output: mockOutput,
+        colors: false,
+        timestamps: true,
+        level: LogLevel.INFO,
+      });
+      expect(() => testLogger.info('Test message')).not.toThrow();
+    });
+
+    test('should handle non-colored output for prefixes', () => {
+      const testLogger = new Logger({
+        output: mockOutput,
+        colors: false,
+        prefix: 'TEST',
+        level: LogLevel.INFO,
+      });
+      expect(() => testLogger.info('Test message')).not.toThrow();
+    });
+
+    test('should handle non-colored output for level tags', () => {
+      const testLogger = new Logger({
+        output: mockOutput,
+        colors: false,
+        level: LogLevel.INFO,
+      });
+      expect(() => testLogger.info('Test message')).not.toThrow();
+    });
+
+    test('should handle non-colored output for source info', () => {
+      const testLogger = new Logger({
+        output: mockOutput,
+        colors: false,
+        showSource: true,
+        level: LogLevel.INFO,
+      });
+      expect(() => testLogger.info('Test message')).not.toThrow();
+    });
+
+    test('should handle non-colored output for messages', () => {
+      const testLogger = new Logger({
+        output: mockOutput,
+        colors: false,
+        level: LogLevel.INFO,
+      });
+      expect(() => testLogger.info('Test message')).not.toThrow();
+    });
+
+    test('should handle non-colored output for data', () => {
+      const testLogger = new Logger({
+        output: mockOutput,
+        colors: false,
+        level: LogLevel.INFO,
+      });
+      expect(() => testLogger.info('Test message', { key: 'value' })).not.toThrow();
+    });
+
+    test('should handle JSON serialization errors gracefully', () => {
+      const testLogger = new Logger({ output: mockOutput });
+
+      // Create an object that will cause JSON.stringify to fail
+      const problematicObject = {
+        get circular() {
+          return this;
+        },
+      };
+
+      // Mock JSON.stringify to throw an error
+      const originalStringify = JSON.stringify;
+      JSON.stringify = jest.fn().mockImplementation(() => {
+        throw new Error('Circular reference');
+      });
+
+      expect(() =>
+        testLogger.info('Test with problematic object', problematicObject)
+      ).not.toThrow();
+
+      // Restore original JSON.stringify
+      JSON.stringify = originalStringify;
+    });
+
+    test('should handle source info when stack is null', () => {
+      // Mock Error constructor to return null stack
+      const originalError = global.Error;
+      global.Error = class MockError extends originalError {
+        get stack(): string | undefined {
+          return undefined;
+        }
+      } as typeof Error;
+
+      const testLogger = new Logger({
+        output: mockOutput,
+        showSource: true,
+        level: LogLevel.INFO,
+      });
+
+      expect(() => testLogger.info('Test with null stack')).not.toThrow();
+
+      // Restore original Error
+      global.Error = originalError;
+    });
+
+    test('should handle source info when stack parsing fails', () => {
+      // Mock Error constructor to return stack that doesn't match our regex
+      const originalError = global.Error;
+      global.Error = class MockError extends originalError {
+        get stack(): string | undefined {
+          return 'Error\n    at someFunction (invalid:format:line)\n    at anotherFunction (also:invalid:format)';
+        }
+      } as typeof Error;
+
+      const testLogger = new Logger({
+        output: mockOutput,
+        showSource: true,
+        level: LogLevel.INFO,
+      });
+
+      expect(() => testLogger.info('Test with invalid stack format')).not.toThrow();
+
+      // Restore original Error
+      global.Error = originalError;
+    });
+
+    test('should handle source info when all stack lines are filtered out', () => {
+      // Mock Error constructor to return stack with only node_modules lines
+      const originalError = global.Error;
+      global.Error = class MockError extends originalError {
+        get stack(): string | undefined {
+          return 'Error\n    at Object.<anonymous> (/path/to/node_modules/something.js:1:1)\n    at Module._compile (internal/modules/cjs/loader.js:1:1)';
+        }
+      } as typeof Error;
+
+      const testLogger = new Logger({
+        output: mockOutput,
+        showSource: true,
+        level: LogLevel.INFO,
+      });
+
+      expect(() => testLogger.info('Test with filtered stack')).not.toThrow();
+
+      // Restore original Error
+      global.Error = originalError;
+    });
+
+    test('should handle source info when fileName extraction fails', () => {
+      // Mock Error constructor to return stack with path that will cause fileName extraction to fail
+      const originalError = global.Error;
+      global.Error = class MockError extends originalError {
+        get stack(): string | undefined {
+          return 'Error\n    at someFunction (C:\\:1:1)\n    at anotherFunction (/:1:1)';
+        }
+      } as typeof Error;
+
+      const testLogger = new Logger({
+        output: mockOutput,
+        showSource: true,
+        level: LogLevel.INFO,
+      });
+
+      expect(() => testLogger.info('Test with problematic file paths')).not.toThrow();
+
+      // Restore original Error
+      global.Error = originalError;
+    });
   });
 
   describe('convenience functions', () => {
