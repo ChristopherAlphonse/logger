@@ -3,7 +3,15 @@
 > A beautiful, intelligent logger for Node.js that makes debugging a joy
 
 [![npm version](https://badge.fury.io/js/@calphonse%2Flogger.svg)](https://badge.fury.io/js/@calphonse%2Flogger)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@calphonse/logger">
+    <img src="https://flat.badgen.net/npm/v/@editorjs/editorjs?icon=npm" alt="npm"/>
+  </a>
+</p>
+
+
+
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-43853D?logo=node.js&logoColor=white)](https://nodejs.org/)
 
