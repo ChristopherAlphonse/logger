@@ -14,7 +14,7 @@
     <img src="https://img.shields.io/badge/Node.js-43853D?logo=node.js&logoColor=white" alt="Node.js"/>
   </a>
 </p>
-## Why This Logger?
+##Why This Logger?
 
 Tired of `console.log` chaos? This logger transforms your debugging experience with:
 
