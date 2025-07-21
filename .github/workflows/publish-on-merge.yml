@@ -1,0 +1,110 @@
+name: Publish on Merge
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [ closed ]
+
+jobs:
+  publish-on-merge:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'publish')
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        registry-url: 'https://registry.npmjs.org'
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 8.15.0
+
+    - name: Get pnpm store directory
+      shell: bash
+      run: |
+        echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+    - name: Setup pnpm cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Run quality checks
+      run: pnpm quality
+
+    - name: Build project
+      run: pnpm build
+
+    - name: Get current version
+      id: current-version
+      run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+    - name: Check if version exists on npm
+      id: version-check
+      run: |
+        VERSION=${{ steps.current-version.outputs.version }}
+        if npm view @calphonse/logger@$VERSION version >/dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "Version $VERSION already exists on npm"
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "Version $VERSION does not exist on npm"
+        fi
+
+    - name: Publish to npm
+      if: steps.version-check.outputs.exists == 'false'
+      run: pnpm publish --no-git-checks --access public
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+    - name: Create Git tag
+      if: steps.version-check.outputs.exists == 'false'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git tag -a v${{ steps.current-version.outputs.version }} -m "Release v${{ steps.current-version.outputs.version }}"
+        git push origin v${{ steps.current-version.outputs.version }}
+
+    - name: Create GitHub Release
+      if: steps.version-check.outputs.exists == 'false'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.current-version.outputs.version }}
+        release_name: Release v${{ steps.current-version.outputs.version }}
+        body: |
+          ## What's Changed
+
+          This release was automatically published from PR #${{ github.event.pull_request.number }}.
+
+          ### Changes
+          ${{ github.event.pull_request.body }}
+        draft: false
+        prerelease: false
+
+    - name: Comment on PR
+      if: steps.version-check.outputs.exists == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `**Version ${{ steps.current-version.outputs.version }} already exists on npm.** Please update the version in package.json before merging.`
+          })
