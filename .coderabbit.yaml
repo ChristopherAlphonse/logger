@@ -1,0 +1,41 @@
+language: 'en'
+early_access: false
+reviews:
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+  path_filters:
+    - '!**/.xml'
+    - '!**/.json'
+  path_instructions:
+    - path: 'src/**/*.ts'
+      instructions: |
+        Review the TypeScript source code for:
+        - Logger best practices (robustness, error handling, extensibility)
+        - Type safety and clarity
+        - Proper use of chalk and color output
+        - Node.js compatibility (ESM/CJS)
+        - Maintainability and documentation
+    - path: 'examples/**/*.ts'
+      instructions: 'Review example usage for clarity, correctness, and best practices.'
+    - path: 'docs/**/*.md'
+      instructions: 'Review the documentation for accuracy, completeness, and clarity.'
+    - path: 'src/__tests__/**/*.ts'
+      instructions: |
+        Review the Jest test code for:
+        - Coverage of logger features and edge cases
+        - Clear and descriptive test cases
+        - Use of Jest best practices
+  auto_review:
+    enabled: true
+    trigger_labels:
+      - 'ready for review'
+    ignore_title_keywords:
+      - 'WIP'
+      - 'DO NOT MERGE'
+    drafts: false
+    base_branches:
+      - 'main'
+chat:
+  auto_reply: true
