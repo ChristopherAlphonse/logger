@@ -2,7 +2,6 @@
 
 > A beautiful, intelligent logger for Node.js that makes debugging a joy
 
-[![npm version](https://badge.fury.io/js/@calphonse%2Flogger.svg)](https://badge.fury.io/js/@calphonse%2Flogger)
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@calphonse/logger">
