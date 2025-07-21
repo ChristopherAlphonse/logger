@@ -5,15 +5,15 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@calphonse/logger">
-    <img src="https://flat.badgen.net/npm/v/@editorjs/editorjs?icon=npm" alt="npm"/>
+    <img src="https://flat.badgen.net/npm/v/@calphonse/logger?icon=npm" alt="npm"/>
+  </a>
+  <a href="https://www.typescriptlang.org/">
+    <img src="https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white" alt="TypeScript"/>
+  </a>
+  <a href="https://nodejs.org/">
+    <img src="https://img.shields.io/badge/Node.js-43853D?logo=node.js&logoColor=white" alt="Node.js"/>
   </a>
 </p>
-
-
-
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-43853D?logo=node.js&logoColor=white)](https://nodejs.org/)
-
 ## Why This Logger?
 
 Tired of `console.log` chaos? This logger transforms your debugging experience with:
