@@ -4,10 +4,10 @@ export type { LoggerConfig, LogEntry, ILogger, LogData } from './types';
 export { LoggerFactory } from './factories';
 export { LogFormatter } from './formatters';
 
+import { LoggerFactory } from './factories';
 import { Logger } from './logger';
 import { LogLevel } from './types';
 import type { LogData, LoggerConfig } from './types';
-import { LoggerFactory } from './factories';
 
 /**
  * Default logger instance with INFO level and sensible defaults.

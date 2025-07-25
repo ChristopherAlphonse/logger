@@ -1,6 +1,6 @@
-import { type ILogger, type LogData, type LogEntry, LogLevel, type LoggerConfig } from './types';
-import { LogFormatter } from './formatters';
 import { LoggerFactory } from './factories';
+import { LogFormatter } from './formatters';
+import { type ILogger, type LogData, type LogEntry, LogLevel, type LoggerConfig } from './types';
 
 /**
  * A customizable logger class that wraps console output with color support using chalk.
