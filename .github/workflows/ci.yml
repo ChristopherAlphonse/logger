@@ -45,11 +45,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Run Biome checks and fixes
+        run: pnpm biome:fix-and-check
+
       - name: Run formatting
         run: pnpm format
-
-      - name: Run linting and formatting checks
-        run: pnpm check
 
       - name: Run type checking
         run: pnpm type-check

@@ -142,8 +142,6 @@ describe('Types', () => {
 
   describe('ILogger interface', () => {
     it('should define all required methods', () => {
-      // This test ensures the interface is properly defined
-      // We can't easily test interface compliance without implementation
       const logger: ILogger = {
         error: jest.fn(),
         warn: jest.fn(),

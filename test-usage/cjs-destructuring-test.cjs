@@ -1,4 +1,4 @@
-console.log('=== CommonJS Destructuring Test ===');
+console.info('=== CommonJS Destructuring Test ===');
 
 const { logger } = require('@calphonse/logger');
 logger.info('Method 1: Destructured logger works!');
@@ -15,4 +15,4 @@ const customLogger = createLogger({
 });
 customLogger.debug('Method 4: Custom logger from destructured createLogger works!');
 
-console.log('All CommonJS import methods work! ✅');
+console.info('All CommonJS import methods work!');

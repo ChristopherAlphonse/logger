@@ -1,6 +1,6 @@
 const logger = require('@calphonse/logger').default;
 
-console.log('=== CommonJS Require Test ===');
+console.info('=== CommonJS Require Test ===');
 
 logger.info('This is a CommonJS require test - info message');
 logger.warn('This is a warning message');
@@ -20,4 +20,4 @@ customLogger.debug('Custom logger from CommonJS works!');
 const childLogger = logger.createChildLogger('CHILD');
 childLogger.info('Child logger from CommonJS works!');
 
-console.log('CommonJS test completed successfully!');
+console.info('CommonJS test completed successfully!');

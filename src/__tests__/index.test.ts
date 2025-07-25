@@ -9,8 +9,6 @@ import {
   setLogLevel,
 } from '../index';
 
-// Jest globals are available without import
-
 describe('Index exports', () => {
   describe('Logger class', () => {
     test('should export Logger class', () => {
@@ -67,7 +65,6 @@ describe('Index exports', () => {
     });
 
     test('should call the default logger methods', () => {
-      // Test that convenience functions don't throw
       expect(() => log.error('test error')).not.toThrow();
       expect(() => log.info('test info')).not.toThrow();
     });
@@ -75,7 +72,6 @@ describe('Index exports', () => {
     test('should call the default logger methods with data', () => {
       const testData = { key: 'value' };
 
-      // Test that convenience functions with data don't throw
       expect(() => log.warn('test warning', testData)).not.toThrow();
       expect(() => log.debug('test debug', testData)).not.toThrow();
       expect(() => log.trace('test trace', testData)).not.toThrow();
@@ -116,7 +112,7 @@ describe('Index exports', () => {
       const originalLevel = logger.getConfig().level;
       setLogLevel(LogLevel.DEBUG);
       expect(logger.getConfig().level).toBe(LogLevel.DEBUG);
-      // Restore original level
+
       if (originalLevel !== undefined) {
         setLogLevel(originalLevel);
       }
@@ -131,32 +127,27 @@ describe('Index exports', () => {
       const originalConfig = logger.getConfig();
       configureLogger({ prefix: 'TEST_CONFIG' });
       expect(logger.getConfig().prefix).toBe('TEST_CONFIG');
-      // Restore original config
       configureLogger(originalConfig);
     });
   });
 
   describe('Type exports', () => {
     test('should export LoggerConfig type', () => {
-      // TypeScript types are not available at runtime, so we just test that the module exports work
       expect(Logger).toBeDefined();
       expect(LogLevel).toBeDefined();
     });
 
     test('should export LogEntry type', () => {
-      // TypeScript types are not available at runtime, so we just test that the module exports work
       expect(Logger).toBeDefined();
       expect(LogLevel).toBeDefined();
     });
 
     test('should export ILogger interface', () => {
-      // TypeScript types are not available at runtime, so we just test that the module exports work
       expect(Logger).toBeDefined();
       expect(LogLevel).toBeDefined();
     });
 
     test('should export LogData type', () => {
-      // TypeScript types are not available at runtime, so we just test that the module exports work
       expect(Logger).toBeDefined();
       expect(LogLevel).toBeDefined();
     });
@@ -172,7 +163,6 @@ describe('Index exports', () => {
 
   describe('Integration tests', () => {
     test('should work with all exports together', () => {
-      // Test that all exports work together without conflicts
       const customLogger = createLogger({ level: LogLevel.DEBUG });
       const childLogger = createChildLogger('INTEGRATION');
 
@@ -181,8 +171,112 @@ describe('Index exports', () => {
       expect(customLogger.getConfig().level).toBe(LogLevel.DEBUG);
       expect(childLogger.getConfig().prefix).toBe('INTEGRATION');
 
-      // Test convenience functions
       expect(() => log.info('Integration test')).not.toThrow();
+    });
+  });
+
+  describe('Factory methods on main logger', () => {
+    test('should have createJsonLogger method', () => {
+      expect(logger.createJsonLogger).toBeDefined();
+      expect(typeof logger.createJsonLogger).toBe('function');
+    });
+
+    test('should create JSON logger via main logger', () => {
+      const jsonLogger = logger.createJsonLogger();
+      expect(jsonLogger).toBeInstanceOf(Logger);
+      expect(jsonLogger.getConfig().json).toBe(true);
+    });
+
+    test('should have createMinimalLogger method', () => {
+      expect(logger.createMinimalLogger).toBeDefined();
+      expect(typeof logger.createMinimalLogger).toBe('function');
+    });
+
+    test('should create minimal logger via main logger', () => {
+      const minimalLogger = logger.createMinimalLogger();
+      expect(minimalLogger).toBeInstanceOf(Logger);
+      expect(minimalLogger.getConfig().timestamps).toBe(false);
+    });
+
+    test('should have createVerboseLogger method', () => {
+      expect(logger.createVerboseLogger).toBeDefined();
+      expect(typeof logger.createVerboseLogger).toBe('function');
+    });
+
+    test('should create verbose logger via main logger', () => {
+      const verboseLogger = logger.createVerboseLogger();
+      expect(verboseLogger).toBeInstanceOf(Logger);
+      expect(verboseLogger.getConfig().level).toBe(LogLevel.TRACE);
+    });
+
+    test('should have LoggerFactory export', () => {
+      expect(logger.LoggerFactory).toBeDefined();
+      expect(typeof logger.LoggerFactory).toBe('object');
+    });
+  });
+
+  describe('Main logger bound methods', () => {
+    test('should have bound error method', () => {
+      expect(typeof logger.error).toBe('function');
+      expect(() => logger.error('test error')).not.toThrow();
+    });
+
+    test('should have bound warn method', () => {
+      expect(typeof logger.warn).toBe('function');
+      expect(() => logger.warn('test warning')).not.toThrow();
+    });
+
+    test('should have bound info method', () => {
+      expect(typeof logger.info).toBe('function');
+      expect(() => logger.info('test info')).not.toThrow();
+    });
+
+    test('should have bound debug method', () => {
+      expect(typeof logger.debug).toBe('function');
+      expect(() => logger.debug('test debug')).not.toThrow();
+    });
+
+    test('should have bound trace method', () => {
+      expect(typeof logger.trace).toBe('function');
+      expect(() => logger.trace('test trace')).not.toThrow();
+    });
+
+    test('should have bound setLevel method', () => {
+      expect(typeof logger.setLevel).toBe('function');
+      const originalLevel = logger.getConfig().level;
+      logger.setLevel(LogLevel.DEBUG);
+      expect(logger.getConfig().level).toBe(LogLevel.DEBUG);
+      if (originalLevel !== undefined) {
+        logger.setLevel(originalLevel);
+      }
+    });
+
+    test('should have bound setConfig method', () => {
+      expect(typeof logger.setConfig).toBe('function');
+      const originalConfig = logger.getConfig();
+      logger.setConfig({ prefix: 'TEST_BOUND' });
+      expect(logger.getConfig().prefix).toBe('TEST_BOUND');
+      logger.setConfig(originalConfig);
+    });
+
+    test('should have bound getConfig method', () => {
+      expect(typeof logger.getConfig).toBe('function');
+      const config = logger.getConfig();
+      expect(config).toBeDefined();
+      expect(typeof config.level).toBe('number');
+    });
+
+    test('should have bound child method', () => {
+      expect(typeof logger.child).toBe('function');
+      const childLogger = logger.child('TEST_CHILD');
+      expect(childLogger).toBeInstanceOf(Logger);
+      expect(childLogger.getConfig().prefix).toBe('TEST_CHILD');
+    });
+
+    test('should have bound isEnabled method', () => {
+      expect(typeof logger.isEnabled).toBe('function');
+      expect(logger.isEnabled(LogLevel.INFO)).toBe(true);
+      expect(logger.isEnabled(LogLevel.TRACE)).toBe(false);
     });
   });
 });

@@ -1,8 +1,10 @@
 export { Logger } from './logger';
 export { LogLevel } from './types';
 export type { LoggerConfig, LogEntry, ILogger, LogData } from './types';
+export { LoggerFactory } from './factories';
+export { LogFormatter } from './formatters';
 
-// Default logger instance
+import { LoggerFactory } from './factories';
 import { Logger } from './logger';
 import { LogLevel } from './types';
 import type { LogData, LoggerConfig } from './types';
@@ -197,10 +199,7 @@ const setLogLevel = (level: LogLevel) => defaultLogger.setLevel(level);
  */
 const configureLogger = (config: Partial<LoggerConfig>) => defaultLogger.setConfig(config);
 
-// Create the main export object that extends the logger instance with utility functions
-// We need to preserve the 'this' context for logger methods, so we can't use Object.assign
 const mainLogger = {
-  // Bind logger methods to preserve 'this' context
   error: defaultLogger.error.bind(defaultLogger),
   warn: defaultLogger.warn.bind(defaultLogger),
   info: defaultLogger.info.bind(defaultLogger),
@@ -212,18 +211,23 @@ const mainLogger = {
   child: defaultLogger.child.bind(defaultLogger),
   isEnabled: defaultLogger.isEnabled.bind(defaultLogger),
 
-  // Add utility functions
   log: log,
   createLogger,
   createChildLogger,
   setLogLevel,
   configureLogger,
-  // Re-export types and enums for convenience
   LogLevel,
   Logger,
+
+  // Factory methods for backward compatibility
+  createJsonLogger: LoggerFactory.createJsonLogger,
+  createMinimalLogger: LoggerFactory.createMinimalLogger,
+  createVerboseLogger: LoggerFactory.createVerboseLogger,
+
+  // Export factory class
+  LoggerFactory,
 };
 
-// Named exports for those who prefer them
 export const logger = mainLogger;
 export { log, createLogger, createChildLogger, setLogLevel, configureLogger };
 

@@ -7,13 +7,11 @@
 
 import { logger } from '../src/index';
 
-// Create a child logger for this demo
 const demoLogger = logger.child('[error-demo]');
 
 async function demonstrateErrorHandling() {
   demoLogger.info('=== Logger Error Handling Demo ===');
 
-  // 1. Basic error logging
   demoLogger.info('1. Basic error logging');
 
   try {
@@ -25,11 +23,9 @@ async function demonstrateErrorHandling() {
     });
   }
 
-  // 2. Structured error logging with context
   demoLogger.info('2. Structured error logging with context');
 
   try {
-    // Simulate a file operation error
     throw new Error('ENOENT: no such file or directory, open "missing-file.txt"');
   } catch (error) {
     demoLogger.error('File operation failed', {
@@ -40,7 +36,6 @@ async function demonstrateErrorHandling() {
     });
   }
 
-  // 3. Warning with structured data
   demoLogger.info('3. Warning with structured data');
 
   demoLogger.warn('High memory usage detected', {
@@ -49,11 +44,10 @@ async function demonstrateErrorHandling() {
     recommendation: 'Consider restarting the application',
   });
 
-  // 4. Info with performance metrics
   demoLogger.info('4. Info with performance metrics');
 
   const startTime = Date.now();
-  await new Promise((resolve) => setTimeout(resolve, 100)); // Simulate work
+  await new Promise((resolve) => setTimeout(resolve, 100));
   const duration = Date.now() - startTime;
 
   demoLogger.info('Operation completed', {
@@ -62,7 +56,6 @@ async function demonstrateErrorHandling() {
     status: 'success',
   });
 
-  // 5. Debug logging (only shown if debug level is enabled)
   demoLogger.info('5. Debug logging');
 
   demoLogger.debug('Processing user data', {
@@ -71,7 +64,6 @@ async function demonstrateErrorHandling() {
     processingSteps: ['validation', 'transformation', 'storage'],
   });
 
-  // 6. Error with retry context
   demoLogger.info('6. Error with retry context');
 
   let retryCount = 0;
@@ -79,7 +71,6 @@ async function demonstrateErrorHandling() {
 
   while (retryCount < maxRetries) {
     try {
-      // Simulate a flaky operation
       if (Math.random() > 0.5) {
         throw new Error('Network timeout');
       }
@@ -101,12 +92,10 @@ async function demonstrateErrorHandling() {
         });
       }
 
-      // Wait before retry
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
   }
 
-  // 7. Child logger with different context
   demoLogger.info('7. Child logger with different context');
 
   const userLogger = logger.child('[user-service]');
@@ -116,7 +105,6 @@ async function demonstrateErrorHandling() {
     ipAddress: '192.168.1.100',
   });
 
-  // 8. JSON output demonstration
   demoLogger.info('8. JSON output demonstration');
 
   const complexData = {
@@ -140,7 +128,6 @@ async function demonstrateErrorHandling() {
   demoLogger.info('=== Demo completed successfully ===');
 }
 
-// Run the demo
 demonstrateErrorHandling().catch((error) => {
   logger.error('Demo failed', { error: error.message });
   process.exit(1);

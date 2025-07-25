@@ -1,15 +1,6 @@
-import chalkModule from 'chalk';
-import {
-  type ChalkColor,
-  type ILogger,
-  type LogData,
-  type LogEntry,
-  LogLevel,
-  type LoggerConfig,
-} from './types';
-
-const chalk =
-  (chalkModule as typeof chalkModule & { default?: typeof chalkModule })?.default || chalkModule;
+import { LoggerFactory } from './factories';
+import { LogFormatter } from './formatters';
+import { type ILogger, type LogData, type LogEntry, LogLevel, type LoggerConfig } from './types';
 
 /**
  * A customizable logger class that wraps console output with color support using chalk.
@@ -25,29 +16,7 @@ const chalk =
  */
 export class Logger implements ILogger {
   private config: LoggerConfig;
-  private levelNames = {
-    [LogLevel.ERROR]: 'ERROR',
-    [LogLevel.WARN]: 'WARN',
-    [LogLevel.INFO]: 'INFO',
-    [LogLevel.DEBUG]: 'DEBUG',
-    [LogLevel.TRACE]: 'TRACE',
-  };
-
-  private levelTagColors: Record<LogLevel, ChalkColor> = {
-    [LogLevel.ERROR]: chalk.red.bold,
-    [LogLevel.WARN]: chalk.yellow.bold,
-    [LogLevel.INFO]: chalk.blue.bold,
-    [LogLevel.DEBUG]: chalk.green.bold,
-    [LogLevel.TRACE]: chalk.gray.bold,
-  };
-
-  private messageColors: Record<LogLevel, ChalkColor> = {
-    [LogLevel.ERROR]: chalk.red,
-    [LogLevel.WARN]: chalk.yellow,
-    [LogLevel.INFO]: chalk.blue,
-    [LogLevel.DEBUG]: chalk.green,
-    [LogLevel.TRACE]: chalk.gray,
-  };
+  private formatter: LogFormatter;
 
   /**
    * Creates a new Logger instance with the specified configuration.
@@ -89,6 +58,7 @@ export class Logger implements ILogger {
       output: process.stdout,
       ...config,
     };
+    this.formatter = new LogFormatter();
   }
 
   /**
@@ -165,6 +135,7 @@ export class Logger implements ILogger {
   trace(message: string, data?: LogData): void {
     this.log(LogLevel.TRACE, message, data);
   }
+
   /**
    * Logs a message with the specified log level and optional data.
    *
@@ -188,12 +159,11 @@ export class Logger implements ILogger {
       prefix: this.config.prefix,
     };
 
-    // Add source information if enabled
     if (this.config.showSource) {
       entry.source = this.getSourceInfo();
     }
 
-    const output = this.formatLogEntry(entry);
+    const output = this.formatter.formatLogEntry(entry, this.config);
     this.write(output);
   }
 
@@ -227,7 +197,7 @@ export class Logger implements ILogger {
    * Updates the logger configuration with new settings.
    *
    * This method merges the provided configuration with the existing one,
-   * allowing you to update any combination of settings without losing
+   * allowing you to update unknown combination of settings without losing
    * other configured values.
    *
    * @param config - Partial configuration to merge with current settings
@@ -310,137 +280,11 @@ export class Logger implements ILogger {
   }
 
   /**
-   * Format a log entry for output
-   */
-  private formatLogEntry(entry: LogEntry): string {
-    if (this.config.json) {
-      return this.formatJson(entry);
-    }
-    return this.formatText(entry);
-  }
-
-  /**
-   * Format log entry as JSON
-   */
-  private formatJson(entry: LogEntry): string {
-    const jsonEntry = {
-      timestamp: entry.timestamp.toISOString(),
-      level: this.levelNames[entry.level],
-      message: entry.message,
-      ...(entry.source && { source: entry.source }),
-      ...(entry.data && { data: entry.data }),
-      ...(entry.prefix && { prefix: entry.prefix }),
-    };
-
-    return `${JSON.stringify(jsonEntry)}\n`;
-  }
-
-  /**
-   * Format log entry as colored text
-   */
-  private formatText(entry: LogEntry): string {
-    const parts: string[] = [];
-
-    this.addTimestamp(parts, entry);
-    this.addPrefix(parts, entry);
-    this.addLevelTag(parts, entry);
-    this.addSource(parts, entry);
-    this.addMessage(parts, entry);
-    this.addData(parts, entry);
-
-    return `${parts.join(' ')}\n`;
-  }
-
-  private addTimestamp(parts: string[], entry: LogEntry): void {
-    if (!this.config.timestamps) return;
-
-    const timestamp = entry.timestamp.toLocaleTimeString('en-US', {
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-    parts.push(this.config.colors ? chalk.gray(`[${timestamp}]`) : `[${timestamp}]`);
-  }
-
-  private addPrefix(parts: string[], entry: LogEntry): void {
-    if (!entry.prefix) return;
-    parts.push(this.config.colors ? chalk.cyan(`[${entry.prefix}]`) : `[${entry.prefix}]`);
-  }
-
-  private addLevelTag(parts: string[], entry: LogEntry): void {
-    const levelName = this.levelNames[entry.level];
-    const levelTagColor = this.levelTagColors[entry.level];
-    parts.push(this.config.colors ? levelTagColor(`[${levelName}]`) : `[${levelName}]`);
-  }
-
-  private addSource(parts: string[], entry: LogEntry): void {
-    if (!entry.source) return;
-    parts.push(this.config.colors ? chalk.magenta(`[${entry.source}]`) : `[${entry.source}]`);
-  }
-
-  private addMessage(parts: string[], entry: LogEntry): void {
-    const messageColor = this.messageColors[entry.level];
-    parts.push(this.config.colors ? messageColor(entry.message) : entry.message);
-  }
-
-  private addData(parts: string[], entry: LogEntry): void {
-    if (entry.data === undefined) return;
-
-    let dataStr: string;
-    if (typeof entry.data === 'object') {
-      try {
-        dataStr = JSON.stringify(entry.data, null, 2);
-      } catch (_error) {
-        dataStr = '[Circular or non-serializable object]';
-      }
-    } else {
-      dataStr = String(entry.data);
-    }
-    parts.push(this.config.colors ? chalk.gray(dataStr) : dataStr);
-  }
-
-  /**
-   * Write output to the configured stream
-   */
-  private write(output: string): void {
-    const stream = this.config.output || process.stdout;
-    stream.write(output);
-  }
-
-  /**
-   * Get source file information for the calling function
-   */
-  private getSourceInfo(): string {
-    const stack = new Error().stack;
-    if (!stack) return 'unknown';
-
-    const lines = stack.split('\n');
-    // Skip the first few lines (Error constructor, Logger methods)
-    for (let i = 3; i < lines.length; i++) {
-      const line = lines[i];
-      if (line.includes('node_modules') || line.includes('packages/logger')) {
-        continue;
-      }
-
-      // Extract file and line information
-      const match = line.match(/at\s+(.+?)\s+\((.+):(\d+):(\d+)\)/);
-      if (match) {
-        const [, _functionName, filePath, lineNum] = match;
-        const fileName = filePath.split('/').pop()?.split('\\').pop() || 'unknown';
-        return `${fileName}:${lineNum}`;
-      }
-    }
-
-    return 'unknown';
-  }
-
-  /**
    * Creates a child logger that inherits all configuration from this logger
    * but adds a prefix to all log messages.
    *
    * Child loggers are useful for organizing logs by module, component, or
-   * any other logical grouping. They maintain all the parent's settings
+   * unknown other logical grouping. They maintain all the parent's settings
    * including colors, timestamps, and log levels.
    *
    * @param prefix - The prefix to add to all log messages from this child logger
@@ -475,115 +319,139 @@ export class Logger implements ILogger {
   }
 
   /**
-   * Creates a logger configured for JSON output, ideal for production environments
-   * and log aggregation systems.
+   * Logs tabular data in a formatted table with colored headers.
    *
-   * This factory method creates a logger with JSON formatting enabled and colors
-   * disabled, making it suitable for machine-readable logs and integration with
-   * log management systems like ELK Stack, Splunk, or CloudWatch.
-   *
-   * @param config - Additional configuration options to merge with JSON defaults
-   * @returns A Logger instance configured for JSON output
+   * @param dataOrLevel - The data array or log level (defaults to LogLevel.INFO if data is passed)
+   * @param dataOrOptions - The data array (if level was specified) or options
+   * @param options - Optional configuration for table display
    *
    * @example
    * ```typescript
-   * const logger = Logger.createJsonLogger({ level: LogLevel.WARN });
+   * const logger = new Logger({ level: LogLevel.INFO, prefix: 'App' });
+   * const data = [
+   *   { name: 'Alice', age: 25, role: 'Engineer' },
+   *   { name: 'Bob', age: 30, role: 'Designer' }
+   * ];
    *
-   * logger.warn('High memory usage detected', {
-   *   memoryUsage: '85%',
-   *   threshold: '80%'
-   * });
+   * // Simple usage (defaults to INFO level)
+   * logger.table(data);
    *
-   * // Output:
-   * // {"timestamp":"2024-01-15T18:30:00.000Z","level":"WARN","message":"High memory usage detected","data":{"memoryUsage":"85%","threshold":"80%"}}
+   * // With specific log level
+   * logger.table(LogLevel.DEBUG, data);
    *
-   * // For production with custom output
-   * const productionLogger = Logger.createJsonLogger({
-   *   output: fs.createWriteStream('app.log'),
-   *   level: LogLevel.ERROR
-   * });
+   * // With options
+   * logger.table(data, { headers: ['Person', 'Years', 'Job'], border: false });
+   *
+   * // With level and options
+   * logger.table(LogLevel.WARN, data, { border: false });
    * ```
    */
+  table(
+    dataOrLevel: LogLevel | Record<string, unknown>[],
+    dataOrOptions?: Record<string, unknown>[] | { headers?: string[]; border?: boolean },
+    options: { headers?: string[]; border?: boolean } = {}
+  ): void {
+    let level: LogLevel;
+    let data: Record<string, unknown>[];
+    let finalOptions: { headers?: string[]; border?: boolean };
+
+    if (Array.isArray(dataOrLevel)) {
+      level = LogLevel.INFO;
+      data = dataOrLevel;
+      finalOptions = (dataOrOptions as { headers?: string[]; border?: boolean }) || {};
+    } else {
+      level = dataOrLevel;
+      data = dataOrOptions as Record<string, unknown>[];
+      finalOptions = options;
+    }
+
+    if (!this.isEnabled(level)) {
+      return;
+    }
+
+    const entry: LogEntry = {
+      level,
+      message: 'Table data',
+      timestamp: new Date(),
+      data,
+      prefix: this.config.prefix,
+    };
+
+    if (this.config.showSource) {
+      entry.source = this.getSourceInfo();
+    }
+
+    if (this.config.json) {
+      const output = this.formatter.formatJson(entry);
+      this.write(output);
+    } else {
+      const outputs = this.formatter.formatTable(entry, data, this.config, finalOptions);
+      for (const output of outputs) {
+        this.write(output);
+      }
+    }
+  }
+
+  /**
+   * Write output to the configured stream
+   */
+  private write(output: string): void {
+    const stream = this.config.output || process.stdout;
+    stream.write(output);
+  }
+
+  /**
+   * Get source file information for the calling function
+   */
+  private getSourceInfo(): string {
+    const stack = new Error().stack;
+    if (!stack) return 'unknown';
+
+    const lines = stack.split('\n');
+    for (let i = 3; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.includes('node_modules') || line.includes('packages/logger')) {
+        continue;
+      }
+
+      const match = line.match(/at\s+(.+?)\s+\((.+):(\d+):(\d+)\)/);
+      if (match) {
+        const [, _functionName, filePath, lineNum] = match;
+        const fileName = filePath.split('/').pop()?.split('\\').pop() || 'unknown';
+        return `${fileName}:${lineNum}`;
+      }
+    }
+
+    return 'unknown';
+  }
+
+  // Static factory methods for backward compatibility
+  /**
+   * Creates a logger configured for JSON output, ideal for production environments
+   * and log aggregation systems.
+   *
+   * @deprecated Use LoggerFactory.createJsonLogger() instead
+   */
   static createJsonLogger(config: Partial<LoggerConfig> = {}): Logger {
-    return new Logger({ ...config, json: true, colors: false });
+    return LoggerFactory.createJsonLogger(config);
   }
 
   /**
    * Creates a logger with minimal output formatting, ideal for simple console output
    * or when you want clean, uncluttered logs.
    *
-   * This factory method creates a logger with timestamps, colors, and source
-   * information disabled, providing the most basic logging experience.
-   *
-   * @param config - Additional configuration options to merge with minimal defaults
-   * @returns A Logger instance configured for minimal output
-   *
-   * @example
-   * ```typescript
-   * const logger = Logger.createMinimalLogger({ level: LogLevel.INFO });
-   *
-   * logger.info('Simple message');
-   * logger.error('Error occurred');
-   *
-   * // Output:
-   * // [INFO] Simple message
-   * // [ERROR] Error occurred
-   *
-   * // With custom prefix
-   * const appLogger = Logger.createMinimalLogger({
-   *   prefix: 'App',
-   *   level: LogLevel.WARN
-   * });
-   * appLogger.warn('Warning message');
-   * // Output: [App] [WARN] Warning message
-   * ```
+   * @deprecated Use LoggerFactory.createMinimalLogger() instead
    */
   static createMinimalLogger(config: Partial<LoggerConfig> = {}): Logger {
-    return new Logger({
-      ...config,
-      timestamps: false,
-      colors: false,
-      showSource: false,
-    });
+    return LoggerFactory.createMinimalLogger(config);
   }
 
   /**
    * Creates a logger with verbose output formatting, ideal for development and debugging.
    *
-   * This factory method creates a logger with all features enabled: TRACE level logging,
-   * timestamps, colors, and source file information. This provides the most detailed
-   * logging experience for development and troubleshooting.
-   *
-   * @param config - Additional configuration options to merge with verbose defaults
-   * @returns A Logger instance configured for verbose output
-   *
-   * @example
-   * ```typescript
-   * const logger = Logger.createVerboseLogger();
-   *
-   * logger.trace('Function called', { function: 'processUser', args: { id: 123 } });
-   * logger.debug('Processing data', { dataSize: 1024, format: 'json' });
-   * logger.info('User authenticated', { userId: 'abc123', method: 'jwt' });
-   *
-   * // Output:
-   * // [18:30:15] [TRACE] [app.js:42] Function called {"function":"processUser","args":{"id":123}}
-   * // [18:30:16] [DEBUG] [app.js:45] Processing data {"dataSize":1024,"format":"json"}
-   * // [18:30:17] [INFO] [app.js:48] User authenticated {"userId":"abc123","method":"jwt"}
-   *
-   * // With custom prefix for module-specific logging
-   * const debugLogger = Logger.createVerboseLogger({
-   *   prefix: 'Debug',
-   *   output: process.stderr // Log to stderr for debug info
-   * });
-   * ```
+   * @deprecated Use LoggerFactory.createVerboseLogger() instead
    */
   static createVerboseLogger(config: Partial<LoggerConfig> = {}): Logger {
-    return new Logger({
-      ...config,
-      level: LogLevel.TRACE,
-      timestamps: true,
-      colors: true,
-      showSource: true,
-    });
+    return LoggerFactory.createVerboseLogger(config);
   }
 }
