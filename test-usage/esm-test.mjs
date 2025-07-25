@@ -1,6 +1,6 @@
 import logger from '@calphonse/logger';
 
-console.log('=== ESM Import Test ===');
+console.info('=== ESM Import Test ===');
 
 logger.info('This is an ESM import test - info message');
 logger.warn('This is a warning message');
@@ -19,4 +19,4 @@ customLogger.debug('Custom logger from ESM works!');
 const childLogger = logger.createChildLogger('CHILD');
 childLogger.info('Child logger from ESM works!');
 
-console.log('ESM test completed successfully!');
+console.info('ESM test completed successfully!');
