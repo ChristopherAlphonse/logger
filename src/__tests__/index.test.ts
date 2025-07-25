@@ -174,4 +174,109 @@ describe('Index exports', () => {
       expect(() => log.info('Integration test')).not.toThrow();
     });
   });
+
+  describe('Factory methods on main logger', () => {
+    test('should have createJsonLogger method', () => {
+      expect(logger.createJsonLogger).toBeDefined();
+      expect(typeof logger.createJsonLogger).toBe('function');
+    });
+
+    test('should create JSON logger via main logger', () => {
+      const jsonLogger = logger.createJsonLogger();
+      expect(jsonLogger).toBeInstanceOf(Logger);
+      expect(jsonLogger.getConfig().json).toBe(true);
+    });
+
+    test('should have createMinimalLogger method', () => {
+      expect(logger.createMinimalLogger).toBeDefined();
+      expect(typeof logger.createMinimalLogger).toBe('function');
+    });
+
+    test('should create minimal logger via main logger', () => {
+      const minimalLogger = logger.createMinimalLogger();
+      expect(minimalLogger).toBeInstanceOf(Logger);
+      expect(minimalLogger.getConfig().timestamps).toBe(false);
+    });
+
+    test('should have createVerboseLogger method', () => {
+      expect(logger.createVerboseLogger).toBeDefined();
+      expect(typeof logger.createVerboseLogger).toBe('function');
+    });
+
+    test('should create verbose logger via main logger', () => {
+      const verboseLogger = logger.createVerboseLogger();
+      expect(verboseLogger).toBeInstanceOf(Logger);
+      expect(verboseLogger.getConfig().level).toBe(LogLevel.TRACE);
+    });
+
+    test('should have LoggerFactory export', () => {
+      expect(logger.LoggerFactory).toBeDefined();
+      expect(typeof logger.LoggerFactory).toBe('object');
+    });
+  });
+
+  describe('Main logger bound methods', () => {
+    test('should have bound error method', () => {
+      expect(typeof logger.error).toBe('function');
+      expect(() => logger.error('test error')).not.toThrow();
+    });
+
+    test('should have bound warn method', () => {
+      expect(typeof logger.warn).toBe('function');
+      expect(() => logger.warn('test warning')).not.toThrow();
+    });
+
+    test('should have bound info method', () => {
+      expect(typeof logger.info).toBe('function');
+      expect(() => logger.info('test info')).not.toThrow();
+    });
+
+    test('should have bound debug method', () => {
+      expect(typeof logger.debug).toBe('function');
+      expect(() => logger.debug('test debug')).not.toThrow();
+    });
+
+    test('should have bound trace method', () => {
+      expect(typeof logger.trace).toBe('function');
+      expect(() => logger.trace('test trace')).not.toThrow();
+    });
+
+    test('should have bound setLevel method', () => {
+      expect(typeof logger.setLevel).toBe('function');
+      const originalLevel = logger.getConfig().level;
+      logger.setLevel(LogLevel.DEBUG);
+      expect(logger.getConfig().level).toBe(LogLevel.DEBUG);
+      if (originalLevel !== undefined) {
+        logger.setLevel(originalLevel);
+      }
+    });
+
+    test('should have bound setConfig method', () => {
+      expect(typeof logger.setConfig).toBe('function');
+      const originalConfig = logger.getConfig();
+      logger.setConfig({ prefix: 'TEST_BOUND' });
+      expect(logger.getConfig().prefix).toBe('TEST_BOUND');
+      logger.setConfig(originalConfig);
+    });
+
+    test('should have bound getConfig method', () => {
+      expect(typeof logger.getConfig).toBe('function');
+      const config = logger.getConfig();
+      expect(config).toBeDefined();
+      expect(typeof config.level).toBe('number');
+    });
+
+    test('should have bound child method', () => {
+      expect(typeof logger.child).toBe('function');
+      const childLogger = logger.child('TEST_CHILD');
+      expect(childLogger).toBeInstanceOf(Logger);
+      expect(childLogger.getConfig().prefix).toBe('TEST_CHILD');
+    });
+
+    test('should have bound isEnabled method', () => {
+      expect(typeof logger.isEnabled).toBe('function');
+      expect(logger.isEnabled(LogLevel.INFO)).toBe(true);
+      expect(logger.isEnabled(LogLevel.TRACE)).toBe(false);
+    });
+  });
 });

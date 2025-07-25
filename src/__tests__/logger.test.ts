@@ -2,6 +2,7 @@ import {
   LogLevel,
   Logger,
   type LoggerConfig,
+  LoggerFactory,
   configureLogger,
   createChildLogger,
   createLogger,
@@ -744,6 +745,78 @@ describe('Logger', () => {
       expect(output).toContain('Bob & Co.');
       expect(output).toContain('€');
       expect(output).toContain('🚀');
+    });
+  });
+
+  describe('LoggerFactory', () => {
+    test('should create JSON logger with default config', () => {
+      const jsonLogger = LoggerFactory.createJsonLogger();
+      const config = jsonLogger.getConfig();
+
+      expect(config.json).toBe(true);
+      expect(config.colors).toBe(false);
+    });
+
+    test('should create JSON logger with custom config', () => {
+      const jsonLogger = LoggerFactory.createJsonLogger({
+        level: LogLevel.ERROR,
+        prefix: 'API',
+        output: mockOutput,
+      });
+      const config = jsonLogger.getConfig();
+
+      expect(config.json).toBe(true);
+      expect(config.colors).toBe(false);
+      expect(config.level).toBe(LogLevel.ERROR);
+      expect(config.prefix).toBe('API');
+    });
+
+    test('should create minimal logger with default config', () => {
+      const minimalLogger = LoggerFactory.createMinimalLogger();
+      const config = minimalLogger.getConfig();
+
+      expect(config.timestamps).toBe(false);
+      expect(config.colors).toBe(false);
+      expect(config.showSource).toBe(false);
+    });
+
+    test('should create minimal logger with custom config', () => {
+      const minimalLogger = LoggerFactory.createMinimalLogger({
+        level: LogLevel.WARN,
+        prefix: 'MINIMAL',
+        output: mockOutput,
+      });
+      const config = minimalLogger.getConfig();
+
+      expect(config.timestamps).toBe(false);
+      expect(config.colors).toBe(false);
+      expect(config.showSource).toBe(false);
+      expect(config.level).toBe(LogLevel.WARN);
+      expect(config.prefix).toBe('MINIMAL');
+    });
+
+    test('should create verbose logger with default config', () => {
+      const verboseLogger = LoggerFactory.createVerboseLogger();
+      const config = verboseLogger.getConfig();
+
+      expect(config.level).toBe(LogLevel.TRACE);
+      expect(config.timestamps).toBe(true);
+      expect(config.colors).toBe(true);
+      expect(config.showSource).toBe(true);
+    });
+
+    test('should create verbose logger with custom config', () => {
+      const verboseLogger = LoggerFactory.createVerboseLogger({
+        prefix: 'VERBOSE',
+        output: mockOutput,
+      });
+      const config = verboseLogger.getConfig();
+
+      expect(config.level).toBe(LogLevel.TRACE);
+      expect(config.timestamps).toBe(true);
+      expect(config.colors).toBe(true);
+      expect(config.showSource).toBe(true);
+      expect(config.prefix).toBe('VERBOSE');
     });
   });
 });
