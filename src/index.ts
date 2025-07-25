@@ -1,11 +1,13 @@
 export { Logger } from './logger';
 export { LogLevel } from './types';
 export type { LoggerConfig, LogEntry, ILogger, LogData } from './types';
+export { LoggerFactory } from './factories';
+export { LogFormatter } from './formatters';
 
-// Default logger instance
 import { Logger } from './logger';
 import { LogLevel } from './types';
 import type { LogData, LoggerConfig } from './types';
+import { LoggerFactory } from './factories';
 
 /**
  * Default logger instance with INFO level and sensible defaults.
@@ -47,7 +49,8 @@ const log = {
    * @param message - The error message to log
    * @param data - Optional metadata or additional details
    */
-  error: (message: string, data?: LogData) => defaultLogger.error(message, data),
+  error: (message: string, data?: LogData) =>
+    defaultLogger.error(message, data),
 
   /**
    * Log a warning message with optional data
@@ -68,14 +71,16 @@ const log = {
    * @param message - The debug message to log
    * @param data - Optional metadata or additional details
    */
-  debug: (message: string, data?: LogData) => defaultLogger.debug(message, data),
+  debug: (message: string, data?: LogData) =>
+    defaultLogger.debug(message, data),
 
   /**
    * Log a trace message with optional data
    * @param message - The trace message to log
    * @param data - Optional metadata or additional details
    */
-  trace: (message: string, data?: LogData) => defaultLogger.trace(message, data),
+  trace: (message: string, data?: LogData) =>
+    defaultLogger.trace(message, data),
 };
 
 /**
@@ -195,12 +200,10 @@ const setLogLevel = (level: LogLevel) => defaultLogger.setLevel(level);
  * });
  * ```
  */
-const configureLogger = (config: Partial<LoggerConfig>) => defaultLogger.setConfig(config);
+const configureLogger = (config: Partial<LoggerConfig>) =>
+  defaultLogger.setConfig(config);
 
-// Create the main export object that extends the logger instance with utility functions
-// We need to preserve the 'this' context for logger methods, so we can't use Object.assign
 const mainLogger = {
-  // Bind logger methods to preserve 'this' context
   error: defaultLogger.error.bind(defaultLogger),
   warn: defaultLogger.warn.bind(defaultLogger),
   info: defaultLogger.info.bind(defaultLogger),
@@ -212,18 +215,23 @@ const mainLogger = {
   child: defaultLogger.child.bind(defaultLogger),
   isEnabled: defaultLogger.isEnabled.bind(defaultLogger),
 
-  // Add utility functions
   log: log,
   createLogger,
   createChildLogger,
   setLogLevel,
   configureLogger,
-  // Re-export types and enums for convenience
   LogLevel,
   Logger,
+
+  // Factory methods for backward compatibility
+  createJsonLogger: LoggerFactory.createJsonLogger,
+  createMinimalLogger: LoggerFactory.createMinimalLogger,
+  createVerboseLogger: LoggerFactory.createVerboseLogger,
+
+  // Export factory class
+  LoggerFactory,
 };
 
-// Named exports for those who prefer them
 export const logger = mainLogger;
 export { log, createLogger, createChildLogger, setLogLevel, configureLogger };
 

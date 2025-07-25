@@ -9,8 +9,6 @@ import {
   setLogLevel,
 } from '../index';
 
-// Jest globals are available without import
-
 describe('Index exports', () => {
   describe('Logger class', () => {
     test('should export Logger class', () => {
@@ -67,7 +65,6 @@ describe('Index exports', () => {
     });
 
     test('should call the default logger methods', () => {
-      // Test that convenience functions don't throw
       expect(() => log.error('test error')).not.toThrow();
       expect(() => log.info('test info')).not.toThrow();
     });
@@ -75,7 +72,6 @@ describe('Index exports', () => {
     test('should call the default logger methods with data', () => {
       const testData = { key: 'value' };
 
-      // Test that convenience functions with data don't throw
       expect(() => log.warn('test warning', testData)).not.toThrow();
       expect(() => log.debug('test debug', testData)).not.toThrow();
       expect(() => log.trace('test trace', testData)).not.toThrow();
@@ -116,7 +112,7 @@ describe('Index exports', () => {
       const originalLevel = logger.getConfig().level;
       setLogLevel(LogLevel.DEBUG);
       expect(logger.getConfig().level).toBe(LogLevel.DEBUG);
-      // Restore original level
+
       if (originalLevel !== undefined) {
         setLogLevel(originalLevel);
       }
@@ -131,32 +127,27 @@ describe('Index exports', () => {
       const originalConfig = logger.getConfig();
       configureLogger({ prefix: 'TEST_CONFIG' });
       expect(logger.getConfig().prefix).toBe('TEST_CONFIG');
-      // Restore original config
       configureLogger(originalConfig);
     });
   });
 
   describe('Type exports', () => {
     test('should export LoggerConfig type', () => {
-      // TypeScript types are not available at runtime, so we just test that the module exports work
       expect(Logger).toBeDefined();
       expect(LogLevel).toBeDefined();
     });
 
     test('should export LogEntry type', () => {
-      // TypeScript types are not available at runtime, so we just test that the module exports work
       expect(Logger).toBeDefined();
       expect(LogLevel).toBeDefined();
     });
 
     test('should export ILogger interface', () => {
-      // TypeScript types are not available at runtime, so we just test that the module exports work
       expect(Logger).toBeDefined();
       expect(LogLevel).toBeDefined();
     });
 
     test('should export LogData type', () => {
-      // TypeScript types are not available at runtime, so we just test that the module exports work
       expect(Logger).toBeDefined();
       expect(LogLevel).toBeDefined();
     });
@@ -172,7 +163,6 @@ describe('Index exports', () => {
 
   describe('Integration tests', () => {
     test('should work with all exports together', () => {
-      // Test that all exports work together without conflicts
       const customLogger = createLogger({ level: LogLevel.DEBUG });
       const childLogger = createChildLogger('INTEGRATION');
 
@@ -181,7 +171,6 @@ describe('Index exports', () => {
       expect(customLogger.getConfig().level).toBe(LogLevel.DEBUG);
       expect(childLogger.getConfig().prefix).toBe('INTEGRATION');
 
-      // Test convenience functions
       expect(() => log.info('Integration test')).not.toThrow();
     });
   });

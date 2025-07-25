@@ -19,7 +19,9 @@ describe('Types', () => {
     });
 
     it('should have all expected levels', () => {
-      const levels = Object.values(LogLevel).filter((value) => typeof value === 'number');
+      const levels = Object.values(LogLevel).filter(
+        value => typeof value === 'number'
+      );
       expect(levels).toHaveLength(5);
       expect(levels).toEqual([0, 1, 2, 3, 4]);
     });
@@ -142,8 +144,6 @@ describe('Types', () => {
 
   describe('ILogger interface', () => {
     it('should define all required methods', () => {
-      // This test ensures the interface is properly defined
-      // We can't easily test interface compliance without implementation
       const logger: ILogger = {
         error: jest.fn(),
         warn: jest.fn(),
