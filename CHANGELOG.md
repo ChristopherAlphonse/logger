@@ -5,6 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-01-27
+
+### Added
+
+- **Table Logging**: New `logger.table()` method for displaying tabular data
+
+  - Supports custom headers and border options
+  - Colored headers with proper column alignment
+  - Works with both text and JSON output formats
+  - Example: `logger.table(data, { headers: ['Name', 'Age'], border: false })`
+
+- **Modular Architecture**: Split logger into focused, maintainable modules
+  - `LogFormatter` class in `src/formatters.ts` for all formatting logic
+  - `LoggerFactory` class in `src/factories.ts` for specialized logger creation
+  - Exported `LogFormatter` and `LoggerFactory` for advanced use cases
+
+### Changed
+
+- **Code Organization**: Refactored main logger file from 753 to ~320 lines (50%+ reduction)
+
+  - Improved separation of concerns with dedicated formatter and factory modules
+  - Enhanced maintainability and testability
+  - Better code structure following enterprise standards
+
+- **Backward Compatibility**: Maintained all existing APIs while improving internal architecture
+  - Static factory methods on Logger class now delegate to LoggerFactory (with deprecation warnings)
+  - All existing imports and usage patterns continue to work unchanged
+  - Added new export paths for advanced users: `import { LoggerFactory, LogFormatter }`
+
+### Technical Improvements
+
+- **Enhanced Modularity**: Clear separation between logging, formatting, and factory concerns
+- **Improved Testability**: Individual components can now be tested in isolation
+- **Better Maintainability**: Smaller, focused files are easier to understand and modify
+- **Future Extensibility**: Easy to add new formatters or factory methods without modifying core logger
+
+### Examples
+
+```typescript
+// New table logging functionality
+const data = [
+  { name: 'Alice', age: 25, role: 'Engineer' },
+  { name: 'Bob', age: 30, role: 'Designer' },
+];
+
+logger.table(data);
+logger.table(LogLevel.DEBUG, data, { headers: ['Person', 'Years', 'Job'] });
+
+// Using new modular exports
+import { LoggerFactory, LogFormatter } from '@calphonse/logger';
+const jsonLogger = LoggerFactory.createJsonLogger({ level: LogLevel.WARN });
+const formatter = new LogFormatter();
+```
+
 ## [1.0.3] - 2025-07-21
 
 ### Fixed
