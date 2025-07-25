@@ -1,14 +1,8 @@
 import chalkModule from 'chalk';
-import {
-  type ChalkColor,
-  type LogEntry,
-  LogLevel,
-  type LoggerConfig,
-} from './types';
+import { type ChalkColor, type LogEntry, LogLevel, type LoggerConfig } from './types';
 
 const chalk =
-  (chalkModule as typeof chalkModule & { default?: typeof chalkModule })
-    ?.default || chalkModule;
+  (chalkModule as typeof chalkModule & { default?: typeof chalkModule })?.default || chalkModule;
 
 export class LogFormatter {
   private levelNames = {
@@ -90,9 +84,7 @@ export class LogFormatter {
     const outputs: string[] = [];
 
     if (!data || data.length === 0) {
-      outputs.push(
-        this.formatText({ ...entry, message: 'No data to display' }, config)
-      );
+      outputs.push(this.formatText({ ...entry, message: 'No data to display' }, config));
       return outputs;
     }
 
@@ -102,13 +94,11 @@ export class LogFormatter {
     const extractionKeys = headers ? dataKeys : displayHeaders;
 
     const rows = data.map((item: Record<string, unknown>) =>
-      extractionKeys.map((col: string) =>
-        item[col] !== undefined ? String(item[col]) : '-'
-      )
+      extractionKeys.map((col: string) => (item[col] !== undefined ? String(item[col]) : '-'))
     );
 
     const colWidths = displayHeaders.map((col: string, i: number) =>
-      Math.max(col.length, ...rows.map(row => row[i].length))
+      Math.max(col.length, ...rows.map((row) => row[i].length))
     );
 
     const pad = (str: string, len: number) => str.padEnd(len, ' ');
@@ -126,9 +116,7 @@ export class LogFormatter {
     const headerRow = coloredHeaders.join(' | ');
     const separator = colWidths.map((w: number) => '-'.repeat(w)).join('-+-');
 
-    const dataRows = rows.map(row =>
-      row.map((cell, i) => pad(cell, colWidths[i])).join(' | ')
-    );
+    const dataRows = rows.map((row) => row.map((cell, i) => pad(cell, colWidths[i])).join(' | '));
 
     const formatLine = (line: string) => {
       const parts: string[] = [];
@@ -143,21 +131,21 @@ export class LogFormatter {
       outputs.push(formatLine(`+-${separator}-+`));
       outputs.push(formatLine(`| ${headerRow} |`));
       outputs.push(formatLine(`+-${separator}-+`));
-      dataRows.forEach(row => outputs.push(formatLine(`| ${row} |`)));
+      for (const row of dataRows) {
+        outputs.push(formatLine(`| ${row} |`));
+      }
       outputs.push(formatLine(`+-${separator}-+`));
     } else {
       outputs.push(formatLine(headerRow));
-      dataRows.forEach(row => outputs.push(formatLine(row)));
+      for (const row of dataRows) {
+        outputs.push(formatLine(row));
+      }
     }
 
     return outputs;
   }
 
-  private addTimestamp(
-    parts: string[],
-    entry: LogEntry,
-    config: LoggerConfig
-  ): void {
+  private addTimestamp(parts: string[], entry: LogEntry, config: LoggerConfig): void {
     if (!config.timestamps) return;
 
     const timestamp = entry.timestamp.toLocaleTimeString('en-US', {
@@ -169,54 +157,28 @@ export class LogFormatter {
     parts.push(config.colors ? chalk.gray(`[${timestamp}]`) : `[${timestamp}]`);
   }
 
-  private addPrefix(
-    parts: string[],
-    entry: LogEntry,
-    config: LoggerConfig
-  ): void {
+  private addPrefix(parts: string[], entry: LogEntry, config: LoggerConfig): void {
     if (!entry.prefix) return;
-    parts.push(
-      config.colors ? chalk.cyan(`[${entry.prefix}]`) : `[${entry.prefix}]`
-    );
+    parts.push(config.colors ? chalk.cyan(`[${entry.prefix}]`) : `[${entry.prefix}]`);
   }
 
-  private addLevelTag(
-    parts: string[],
-    entry: LogEntry,
-    config: LoggerConfig
-  ): void {
+  private addLevelTag(parts: string[], entry: LogEntry, config: LoggerConfig): void {
     const levelName = this.levelNames[entry.level];
     const levelTagColor = this.levelTagColors[entry.level];
-    parts.push(
-      config.colors ? levelTagColor(`[${levelName}]`) : `[${levelName}]`
-    );
+    parts.push(config.colors ? levelTagColor(`[${levelName}]`) : `[${levelName}]`);
   }
 
-  private addSource(
-    parts: string[],
-    entry: LogEntry,
-    config: LoggerConfig
-  ): void {
+  private addSource(parts: string[], entry: LogEntry, config: LoggerConfig): void {
     if (!entry.source) return;
-    parts.push(
-      config.colors ? chalk.magenta(`[${entry.source}]`) : `[${entry.source}]`
-    );
+    parts.push(config.colors ? chalk.magenta(`[${entry.source}]`) : `[${entry.source}]`);
   }
 
-  private addMessage(
-    parts: string[],
-    entry: LogEntry,
-    config: LoggerConfig
-  ): void {
+  private addMessage(parts: string[], entry: LogEntry, config: LoggerConfig): void {
     const messageColor = this.messageColors[entry.level];
     parts.push(config.colors ? messageColor(entry.message) : entry.message);
   }
 
-  private addData(
-    parts: string[],
-    entry: LogEntry,
-    config: LoggerConfig
-  ): void {
+  private addData(parts: string[], entry: LogEntry, config: LoggerConfig): void {
     if (entry.data === undefined) return;
 
     let dataStr: string;

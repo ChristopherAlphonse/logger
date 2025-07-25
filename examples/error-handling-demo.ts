@@ -26,9 +26,7 @@ async function demonstrateErrorHandling() {
   demoLogger.info('2. Structured error logging with context');
 
   try {
-    throw new Error(
-      'ENOENT: no such file or directory, open "missing-file.txt"'
-    );
+    throw new Error('ENOENT: no such file or directory, open "missing-file.txt"');
   } catch (error) {
     demoLogger.error('File operation failed', {
       error: error.message,
@@ -49,7 +47,7 @@ async function demonstrateErrorHandling() {
   demoLogger.info('4. Info with performance metrics');
 
   const startTime = Date.now();
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await new Promise((resolve) => setTimeout(resolve, 100));
   const duration = Date.now() - startTime;
 
   demoLogger.info('Operation completed', {
@@ -94,7 +92,7 @@ async function demonstrateErrorHandling() {
         });
       }
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
   }
 
@@ -130,7 +128,7 @@ async function demonstrateErrorHandling() {
   demoLogger.info('=== Demo completed successfully ===');
 }
 
-demonstrateErrorHandling().catch(error => {
+demonstrateErrorHandling().catch((error) => {
   logger.error('Demo failed', { error: error.message });
   process.exit(1);
 });

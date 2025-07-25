@@ -1,10 +1,4 @@
-import {
-  type ILogger,
-  type LogData,
-  type LogEntry,
-  LogLevel,
-  type LoggerConfig,
-} from './types';
+import { type ILogger, type LogData, type LogEntry, LogLevel, type LoggerConfig } from './types';
 import { LogFormatter } from './formatters';
 import { LoggerFactory } from './factories';
 
@@ -354,9 +348,7 @@ export class Logger implements ILogger {
    */
   table(
     dataOrLevel: LogLevel | Record<string, unknown>[],
-    dataOrOptions?:
-      | Record<string, unknown>[]
-      | { headers?: string[]; border?: boolean },
+    dataOrOptions?: Record<string, unknown>[] | { headers?: string[]; border?: boolean },
     options: { headers?: string[]; border?: boolean } = {}
   ): void {
     let level: LogLevel;
@@ -366,8 +358,7 @@ export class Logger implements ILogger {
     if (Array.isArray(dataOrLevel)) {
       level = LogLevel.INFO;
       data = dataOrLevel;
-      finalOptions =
-        (dataOrOptions as { headers?: string[]; border?: boolean }) || {};
+      finalOptions = (dataOrOptions as { headers?: string[]; border?: boolean }) || {};
     } else {
       level = dataOrLevel;
       data = dataOrOptions as Record<string, unknown>[];
@@ -394,13 +385,10 @@ export class Logger implements ILogger {
       const output = this.formatter.formatJson(entry);
       this.write(output);
     } else {
-      const outputs = this.formatter.formatTable(
-        entry,
-        data,
-        this.config,
-        finalOptions
-      );
-      outputs.forEach(output => this.write(output));
+      const outputs = this.formatter.formatTable(entry, data, this.config, finalOptions);
+      for (const output of outputs) {
+        this.write(output);
+      }
     }
   }
 
@@ -429,8 +417,7 @@ export class Logger implements ILogger {
       const match = line.match(/at\s+(.+?)\s+\((.+):(\d+):(\d+)\)/);
       if (match) {
         const [, _functionName, filePath, lineNum] = match;
-        const fileName =
-          filePath.split('/').pop()?.split('\\').pop() || 'unknown';
+        const fileName = filePath.split('/').pop()?.split('\\').pop() || 'unknown';
         return `${fileName}:${lineNum}`;
       }
     }

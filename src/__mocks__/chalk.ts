@@ -1,23 +1,12 @@
 const createChalkMock = () => {
-  const colors = [
-    'red',
-    'green',
-    'blue',
-    'yellow',
-    'magenta',
-    'cyan',
-    'gray',
-    'white',
-    'black',
-  ];
+  const colors = ['red', 'green', 'blue', 'yellow', 'magenta', 'cyan', 'gray', 'white', 'black'];
   const styles = ['bold', 'italic', 'underline', 'inverse', 'strikethrough'];
 
   type ChalkMock = ((text: string) => string) & Record<string, unknown>;
   const mock: ChalkMock = ((text: string) => text) as ChalkMock;
 
   for (const color of colors) {
-    const colorFn = (text: string) =>
-      `[${color.toUpperCase()}]${text}[/${color.toUpperCase()}]`;
+    const colorFn = (text: string) => `[${color.toUpperCase()}]${text}[/${color.toUpperCase()}]`;
     mock[color] = colorFn;
 
     for (const style of styles) {
@@ -49,9 +38,7 @@ const createChalkMock = () => {
   }
 
   for (const color of colors) {
-    const bgBrightName = `bg${color.charAt(0).toUpperCase()}${color.slice(
-      1
-    )}Bright`;
+    const bgBrightName = `bg${color.charAt(0).toUpperCase()}${color.slice(1)}Bright`;
     const bgBrightFn = (text: string) =>
       `[BG-${color.toUpperCase()}-BRIGHT]${text}[/BG-${color.toUpperCase()}-BRIGHT]`;
     mock[bgBrightName] = bgBrightFn;
@@ -63,8 +50,7 @@ const createChalkMock = () => {
   }
 
   for (const style of styles) {
-    mock[style] = (text: string) =>
-      `[${style.toUpperCase()}]${text}[/${style.toUpperCase()}]`;
+    mock[style] = (text: string) => `[${style.toUpperCase()}]${text}[/${style.toUpperCase()}]`;
   }
 
   return mock;

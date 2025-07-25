@@ -4,7 +4,7 @@ import { LogLevel, type LoggerConfig } from './types';
 /**
  * Logger factory functions for creating specialized logger instances
  */
-export class LoggerFactory {
+export const LoggerFactory = {
   /**
    * Creates a logger configured for JSON output, ideal for production environments
    * and log aggregation systems.
@@ -35,9 +35,9 @@ export class LoggerFactory {
    * });
    * ```
    */
-  static createJsonLogger(config: Partial<LoggerConfig> = {}): Logger {
+  createJsonLogger(config: Partial<LoggerConfig> = {}): Logger {
     return new Logger({ ...config, json: true, colors: false });
-  }
+  },
 
   /**
    * Creates a logger with minimal output formatting, ideal for simple console output
@@ -69,14 +69,14 @@ export class LoggerFactory {
    * // Output: [App] [WARN] Warning message
    * ```
    */
-  static createMinimalLogger(config: Partial<LoggerConfig> = {}): Logger {
+  createMinimalLogger(config: Partial<LoggerConfig> = {}): Logger {
     return new Logger({
       ...config,
       timestamps: false,
       colors: false,
       showSource: false,
     });
-  }
+  },
 
   /**
    * Creates a logger with verbose output formatting, ideal for development and debugging.
@@ -108,7 +108,7 @@ export class LoggerFactory {
    * });
    * ```
    */
-  static createVerboseLogger(config: Partial<LoggerConfig> = {}): Logger {
+  createVerboseLogger(config: Partial<LoggerConfig> = {}): Logger {
     return new Logger({
       ...config,
       level: LogLevel.TRACE,
@@ -116,5 +116,5 @@ export class LoggerFactory {
       colors: true,
       showSource: true,
     });
-  }
-}
+  },
+};

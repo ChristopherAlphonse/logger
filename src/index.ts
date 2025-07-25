@@ -49,8 +49,7 @@ const log = {
    * @param message - The error message to log
    * @param data - Optional metadata or additional details
    */
-  error: (message: string, data?: LogData) =>
-    defaultLogger.error(message, data),
+  error: (message: string, data?: LogData) => defaultLogger.error(message, data),
 
   /**
    * Log a warning message with optional data
@@ -71,16 +70,14 @@ const log = {
    * @param message - The debug message to log
    * @param data - Optional metadata or additional details
    */
-  debug: (message: string, data?: LogData) =>
-    defaultLogger.debug(message, data),
+  debug: (message: string, data?: LogData) => defaultLogger.debug(message, data),
 
   /**
    * Log a trace message with optional data
    * @param message - The trace message to log
    * @param data - Optional metadata or additional details
    */
-  trace: (message: string, data?: LogData) =>
-    defaultLogger.trace(message, data),
+  trace: (message: string, data?: LogData) => defaultLogger.trace(message, data),
 };
 
 /**
@@ -200,8 +197,7 @@ const setLogLevel = (level: LogLevel) => defaultLogger.setLevel(level);
  * });
  * ```
  */
-const configureLogger = (config: Partial<LoggerConfig>) =>
-  defaultLogger.setConfig(config);
+const configureLogger = (config: Partial<LoggerConfig>) => defaultLogger.setConfig(config);
 
 const mainLogger = {
   error: defaultLogger.error.bind(defaultLogger),
