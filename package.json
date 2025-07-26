@@ -1,17 +1,26 @@
 {
   "name": "@calphonse/logger",
-  "version": "1.1.0",
+  "version": "1.1.1-canary.1",
   "description": "Colored logging utility with chalk for Node.js applications",
   "author": "Christopher Alphonse",
   "homepage": "https://github.com/ChristopherAlphonse/logger",
   "repository": "github:ChristopherAlphonse/logger",
   "license": "MIT",
-  "keywords": ["logger", "logging", "chalk", "colors", "console", "utility"],
+  "keywords": [
+    "logger",
+    "logging",
+    "chalk",
+    "colors",
+    "console",
+    "utility"
+  ],
   "main": "dist/index.cjs.js",
   "module": "dist/index.es.js",
   "types": "dist/index.d.ts",
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build",
