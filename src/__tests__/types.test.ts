@@ -19,9 +19,7 @@ describe('Types', () => {
     });
 
     it('should have all expected levels', () => {
-      const levels = Object.values(LogLevel).filter(
-        value => typeof value === 'number'
-      );
+      const levels = Object.values(LogLevel).filter((value) => typeof value === 'number');
       expect(levels).toHaveLength(5);
       expect(levels).toEqual([0, 1, 2, 3, 4]);
     });

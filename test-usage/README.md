@@ -11,6 +11,7 @@ This directory contains comprehensive tests for the `@calphonse/logger` package 
 - **`esm-test.mjs`** - Tests ES module imports and functionality
 - **`typescript-support.ts`** - Tests TypeScript support with default imports
 - **`typescript-destructuring.ts`** - Tests TypeScript support with destructuring imports
+- **`single-object-test.mjs`** - Tests single object table functionality (new feature)
 
 ### Test Coverage
 
@@ -36,6 +37,7 @@ npm run test:cjs-destructuring
 npm run test:esm
 npm run test:ts
 npm run test:ts-destructuring
+npm run test:single-object
 ```
 
 ## Expected Output
@@ -65,6 +67,37 @@ import { logger, createLogger, LogLevel } from '@calphonse/logger';
 
 ```javascript
 import logger from '@calphonse/logger';
+```
+
+## Single Object Table Functionality
+
+The new canary version supports single object table logging, perfect for displaying key-value pairs:
+
+```typescript
+// Your exact use case now works!
+function logCacheInfo(
+  operation: string,
+  tags?: Array<string>,
+  revalidate?: number
+) {
+  const tableData = {
+    'Cache Operation': operation,
+    'Cache Tags': tags ? tags.join(', ') : undefined,
+    'Revalidate (s)': revalidate,
+    Timestamp: new Date().toISOString(),
+  };
+  logger.table(tableData); // ✅ Now supported!
+}
+```
+
+This produces beautiful formatted tables:
+
+```
+[19:36:36] +-----------------+---------------+----------------+--------------------------+
+[19:36:36] | Cache Operation | Cache Tags    | Revalidate (s) | Timestamp                |
+[19:36:36] +-----------------+---------------+----------------+--------------------------+
+[19:36:36] | GET             | user, profile | 3600           | 2025-07-26T23:36:36.125Z |
+[19:36:36] +-----------------+---------------+----------------+--------------------------+
 ```
 
 ## Package Configuration

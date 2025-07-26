@@ -115,7 +115,7 @@ const formatter = new LogFormatter();
   - Comprehensive TSDoc documentation
   - IntelliSense support with parameter hints
   - Zero-configuration setup
-  - Familiar API similar to console.log
+  - Familiar API similar to logger.log
 
 - **Advanced Features**:
 
@@ -128,7 +128,7 @@ const formatter = new LogFormatter();
 - **Factory Methods**:
 
   - `Logger.createJsonLogger()` - Production-ready JSON logging
-  - `Logger.createMinimalLogger()` - Simple console output
+  - `Logger.createMinimalLogger()` - Simple logger output
   - `Logger.createVerboseLogger()` - Development debugging
 
 - **Convenience Functions**:

@@ -1,4 +1,4 @@
-console.info('=== ESM Destructuring Test ===');
+logger.info('=== ESM Destructuring Test ===');
 
 import { logger, createLogger, LogLevel } from '@calphonse/logger';
 logger.info('Method 1: Destructured logger works!');
@@ -13,6 +13,8 @@ const customLogger = createLogger({
   level: LogLevel.DEBUG,
   prefix: 'CUSTOM',
 });
-customLogger.debug('Method 4: Custom logger from destructured createLogger works!');
+customLogger.debug(
+  'Method 4: Custom logger from destructured createLogger works!'
+);
 
-console.info('All ESM import methods work!');
+logger.info('All ESM import methods work!');

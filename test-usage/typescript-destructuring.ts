@@ -1,6 +1,6 @@
 import { logger, createLogger, LogLevel } from '@calphonse/logger';
 
-console.info('=== TypeScript Destructuring Test ===');
+logger.info('=== TypeScript Destructuring Test ===');
 
 logger.info('Method 1: Destructured logger works!');
 logger.warn('This is a warning message');
@@ -15,15 +15,25 @@ const customLogger = createLogger({
   level: LogLevel.DEBUG,
   prefix: 'CUSTOM',
 });
-customLogger.debug('Method 2: Custom logger from destructured createLogger works!');
+customLogger.debug(
+  'Method 2: Custom logger from destructured createLogger works!'
+);
 
 const childLogger = logger.createChildLogger('CHILD');
 childLogger.info('Method 3: Child logger from TypeScript works!');
 
-// Test table functionality
+// Test table functionality with array of objects
 logger.table(LogLevel.INFO, [
   { name: 'Alice', age: 28, role: 'Engineer' },
   { name: 'Bob', age: 34, role: 'Designer' },
 ]);
 
-console.info('TypeScript destructuring test completed successfully!');
+// Test single object table functionality (new feature)
+logger.table({
+  'Cache Operation': 'PUT',
+  'Cache Tags': 'update, user',
+  'Revalidate (s)': 7200,
+  Timestamp: new Date().toISOString(),
+});
+
+logger.info('TypeScript destructuring test completed successfully!');

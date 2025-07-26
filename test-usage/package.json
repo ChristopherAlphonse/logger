@@ -3,21 +3,25 @@
   "version": "1.0.0",
   "description": "Test usage of @calphonse/logger in different formats",
   "author": "",
-  "keywords": ["test", "logger"],
+  "keywords": [
+    "test",
+    "logger"
+  ],
   "license": "ISC",
   "main": "index.js",
   "scripts": {
     "test": "npm run test:all",
-    "test:all": "npm run test:cjs && npm run test:cjs-destructuring && npm run test:esm && npm run test:ts && npm run test:ts-destructuring",
+    "test:all": "npm run test:cjs && npm run test:cjs-destructuring && npm run test:esm && npm run test:ts && npm run test:ts-destructuring && npm run test:single-object",
     "test:cjs": "node cjs-test.mjs",
     "test:cjs-destructuring": "node cjs-destructuring-test.mjs",
     "test:esm": "node esm-test.mjs",
     "test:ts": "tsx typescript-support.ts",
-    "test:ts-destructuring": "tsx typescript-destructuring.ts"
+    "test:ts-destructuring": "tsx typescript-destructuring.ts",
+    "test:single-object": "node single-object-test.mjs"
   },
   "type": "module",
   "dependencies": {
-    "@calphonse/logger": "file:..",
+    "@calphonse/logger": "^1.1.1-canary.2",
     "chalk": "^5.3.0"
   },
   "devDependencies": {

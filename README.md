@@ -2,7 +2,6 @@
 
 > A beautiful, intelligent logger for Node.js that makes debugging a joy
 
-
 <p align="center">
   <a href="https://www.npmjs.com/package/@calphonse/logger">
     <img src="https://flat.badgen.net/npm/v/@calphonse/logger?icon=npm" alt="npm"/>
@@ -16,7 +15,7 @@
 </p>
 ##Why This Logger?
 
-Tired of `console.log` chaos? This logger transforms your debugging experience with:
+Tired of `logger.log` chaos? This logger transforms your debugging experience with:
 
 - **Beautiful colored output** - Easy to read and visually organized
 - **Structured logging** - JSON support with rich context
@@ -24,7 +23,6 @@ Tired of `console.log` chaos? This logger transforms your debugging experience w
 - **Zero performance impact** - Async logging that won't slow your app
 - **Developer-friendly** - Works great out of the box, highly configurable
 - **TypeScript first** - Full type safety and excellent IntelliSense
-
 
 ![Logger Demo](examples/demo.png)
 
@@ -43,7 +41,7 @@ yarn add @calphonse/logger
 ```typescript
 import { logger } from '@calphonse/logger';
 
-// Basic usage - just like console.log but better!
+// Basic usage - just like logger.log but better!
 logger.info('Application started');
 logger.warn('High memory usage detected');
 logger.error('Something went wrong', { error: 'details' });
@@ -53,7 +51,7 @@ logger.info('User login attempt', {
   userId: '12345',
   method: 'email',
   ipAddress: '192.168.1.100',
-  timestamp: new Date().toISOString()
+  timestamp: new Date().toISOString(),
 });
 ```
 
@@ -68,11 +66,12 @@ logger.info('Server starting on port 3000');
 logger.warn('Database connection slow');
 logger.error('Failed to process request', {
   requestId: 'req-123',
-  error: 'Connection timeout'
+  error: 'Connection timeout',
 });
 ```
 
 **Output:**
+
 ```
 [14:30:25] [INFO] Server starting on port 3000
 [14:30:26] [WARN] Database connection slow
@@ -95,8 +94,8 @@ jsonLogger.info('User action', {
   timestamp: new Date().toISOString(),
   metadata: {
     userAgent: 'Mozilla/5.0...',
-    ipAddress: '192.168.1.100'
-  }
+    ipAddress: '192.168.1.100',
+  },
 });
 ```
 
@@ -121,13 +120,13 @@ apiLogger.info('Request processed', { endpoint: '/api/users' });
 import { Logger, LogLevel } from '@calphonse/logger';
 
 const customLogger = new Logger({
-  level: LogLevel.DEBUG,           // Set minimum log level
-  timestamps: true,                // Include timestamps
-  colors: true,                    // Enable colored output
-  showSource: true,                // Show file/line information
-  prefix: '[MY-APP]',             // Custom prefix
-  json: false,                     // Text output (not JSON)
-  timestampFormat: 'HH:mm:ss.SSS' // Custom timestamp format
+  level: LogLevel.DEBUG, // Set minimum log level
+  timestamps: true, // Include timestamps
+  colors: true, // Enable colored output
+  showSource: true, // Show file/line information
+  prefix: '[MY-APP]', // Custom prefix
+  json: false, // Text output (not JSON)
+  timestampFormat: 'HH:mm:ss.SSS', // Custom timestamp format
 });
 ```
 
@@ -168,11 +167,11 @@ logger.child(prefix: string): Logger
 
 ```typescript
 enum LogLevel {
-  ERROR = 0,  // Only errors
-  WARN = 1,   // Warnings and errors
-  INFO = 2,   // Info, warnings, and errors (default)
-  DEBUG = 3,  // Debug, info, warnings, and errors
-  TRACE = 4   // Everything
+  ERROR = 0, // Only errors
+  WARN = 1, // Warnings and errors
+  INFO = 2, // Info, warnings, and errors (default)
+  DEBUG = 3, // Debug, info, warnings, and errors
+  TRACE = 4, // Everything
 }
 ```
 
@@ -180,13 +179,13 @@ enum LogLevel {
 
 ```typescript
 interface LoggerConfig {
-  level?: LogLevel;              // Minimum log level
-  timestamps?: boolean;          // Include timestamps
-  colors?: boolean;              // Enable colored output
-  timestampFormat?: string;      // Timestamp format
-  showSource?: boolean;          // Show file/line info
-  prefix?: string;               // Custom prefix
-  json?: boolean;                // JSON output format
+  level?: LogLevel; // Minimum log level
+  timestamps?: boolean; // Include timestamps
+  colors?: boolean; // Enable colored output
+  timestampFormat?: string; // Timestamp format
+  showSource?: boolean; // Show file/line info
+  prefix?: string; // Custom prefix
+  json?: boolean; // JSON output format
   output?: NodeJS.WritableStream; // Custom output stream
 }
 ```
@@ -212,7 +211,7 @@ app.use((req, res, next) => {
       url: req.url,
       status: res.statusCode,
       duration: `${duration}ms`,
-      userAgent: req.get('User-Agent')
+      userAgent: req.get('User-Agent'),
     });
   });
 
@@ -225,11 +224,11 @@ app.use((req, res, next) => {
 ```typescript
 import { logger } from '@calphonse/logger';
 
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', error => {
   logger.error('Uncaught Exception', {
     error: error.message,
     stack: error.stack,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
   process.exit(1);
 });
@@ -238,7 +237,7 @@ process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection', {
     reason: reason,
     promise: promise,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 ```
@@ -261,7 +260,7 @@ async function createUser(userData) {
     const duration = Date.now() - start;
     dbLogger.info('User created successfully', {
       userId: user.id,
-      duration: `${duration}ms`
+      duration: `${duration}ms`,
     });
 
     return user;
@@ -270,7 +269,7 @@ async function createUser(userData) {
     dbLogger.error('Failed to create user', {
       email: userData.email,
       error: error.message,
-      duration: `${duration}ms`
+      duration: `${duration}ms`,
     });
     throw error;
   }
@@ -343,7 +342,6 @@ We're working on exciting new features!:
 
 - Built with [Chalk](https://github.com/chalk/chalk) for beautiful terminal colors
 - Inspired by the need for better debugging tools in Node.js
-
 
 ---
 

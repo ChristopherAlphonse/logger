@@ -9,7 +9,7 @@ import {
 } from './types';
 
 /**
- * A customizable logger class that wraps console output with color support using chalk.
+ * A customizable logger class that wraps logger output with color support using chalk.
  * Provides flexible logging with configurable levels, timestamps, source information,
  * and output formats (human-readable or JSON).
  *
@@ -244,8 +244,8 @@ export class Logger implements ILogger {
    * const logger = new Logger({ level: LogLevel.DEBUG, prefix: 'App' });
    *
    * const config = logger.getConfig();
-   * console.log(config.level); // LogLevel.DEBUG
-   * console.log(config.prefix); // 'App'
+   * logger.log(config.level); // LogLevel.DEBUG
+   * logger.log(config.prefix); // 'App'
    *
    * // The returned config is a copy, so it's safe to modify
    * config.level = LogLevel.INFO; // Doesn't affect the logger
@@ -463,7 +463,7 @@ export class Logger implements ILogger {
   }
 
   /**
-   * Creates a logger with minimal output formatting, ideal for simple console output
+   * Creates a logger with minimal output formatting, ideal for simple logger output
    * or when you want clean, uncluttered logs.
    *
    * @deprecated Use LoggerFactory.createMinimalLogger() instead
