@@ -19,7 +19,9 @@ describe('Types', () => {
     });
 
     it('should have all expected levels', () => {
-      const levels = Object.values(LogLevel).filter((value) => typeof value === 'number');
+      const levels = Object.values(LogLevel).filter(
+        value => typeof value === 'number'
+      );
       expect(levels).toHaveLength(5);
       expect(levels).toEqual([0, 1, 2, 3, 4]);
     });
@@ -149,6 +151,7 @@ describe('Types', () => {
         debug: jest.fn(),
         trace: jest.fn(),
         log: jest.fn(),
+        table: jest.fn(),
         setLevel: jest.fn(),
         setConfig: jest.fn(),
         getConfig: jest.fn(),
@@ -162,6 +165,7 @@ describe('Types', () => {
       expect(typeof logger.debug).toBe('function');
       expect(typeof logger.trace).toBe('function');
       expect(typeof logger.log).toBe('function');
+      expect(typeof logger.table).toBe('function');
       expect(typeof logger.setLevel).toBe('function');
       expect(typeof logger.setConfig).toBe('function');
       expect(typeof logger.getConfig).toBe('function');

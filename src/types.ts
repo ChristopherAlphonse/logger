@@ -67,6 +67,13 @@ export interface ILogger {
   debug(message: string, data?: LogData): void;
   trace(message: string, data?: LogData): void;
   log(level: LogLevel, message: string, data?: LogData): void;
+  table(
+    dataOrLevel: LogLevel | Record<string, unknown>[] | Record<string, unknown>,
+    dataOrOptions?:
+      | Record<string, unknown>[]
+      | { headers?: string[]; border?: boolean },
+    options?: { headers?: string[]; border?: boolean }
+  ): void;
   setLevel(level: LogLevel): void;
   setConfig(config: Partial<LoggerConfig>): void;
   getConfig(): LoggerConfig;

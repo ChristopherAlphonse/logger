@@ -1,6 +1,6 @@
 {
   "name": "@calphonse/logger",
-  "version": "1.1.1-canary.1",
+  "version": "1.1.1-canary.2",
   "description": "Colored logging utility with chalk for Node.js applications",
   "author": "Christopher Alphonse",
   "homepage": "https://github.com/ChristopherAlphonse/logger",
