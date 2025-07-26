@@ -205,6 +205,7 @@ const mainLogger = {
   info: defaultLogger.info.bind(defaultLogger),
   debug: defaultLogger.debug.bind(defaultLogger),
   trace: defaultLogger.trace.bind(defaultLogger),
+  table: defaultLogger.table.bind(defaultLogger),
   setLevel: defaultLogger.setLevel.bind(defaultLogger),
   setConfig: defaultLogger.setConfig.bind(defaultLogger),
   getConfig: defaultLogger.getConfig.bind(defaultLogger),

@@ -7,7 +7,7 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'Logger',
-      fileName: (format) => (format === 'es' ? 'index.es.js' : 'index.cjs'),
+      fileName: (format) => (format === 'es' ? 'index.es.js' : 'index.cjs.js'),
       formats: ['es', 'cjs'],
     },
     rollupOptions: {
@@ -16,7 +16,7 @@ export default defineConfig({
         globals: {
           chalk: 'chalk',
         },
-        exports: 'auto',
+        exports: 'named',
       },
     },
     sourcemap: true,
@@ -26,6 +26,8 @@ export default defineConfig({
     dts({
       insertTypesEntry: true,
       rollupTypes: true,
+      copyDtsFiles: true,
+      include: ['src/**/*'],
     }),
   ],
 });

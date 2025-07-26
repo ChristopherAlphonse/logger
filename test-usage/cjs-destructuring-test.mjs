@@ -1,12 +1,12 @@
-console.info('=== CommonJS Destructuring Test ===');
+console.info('=== ESM Destructuring Test ===');
 
-const { logger } = require('@calphonse/logger');
+import { logger, createLogger, LogLevel } from '@calphonse/logger';
 logger.info('Method 1: Destructured logger works!');
 
-const loggerDefault = require('@calphonse/logger').default;
+import loggerDefault from '@calphonse/logger';
 loggerDefault.warn('Method 2: Default export works!');
 
-const { logger: myLogger, createLogger, LogLevel } = require('@calphonse/logger');
+import { logger as myLogger } from '@calphonse/logger';
 myLogger.error('Method 3: Multiple destructured exports work!');
 
 const customLogger = createLogger({
@@ -15,4 +15,4 @@ const customLogger = createLogger({
 });
 customLogger.debug('Method 4: Custom logger from destructured createLogger works!');
 
-console.info('All CommonJS import methods work!');
+console.info('All ESM import methods work!');
