@@ -79,7 +79,7 @@ export class ColoredTextFormatter extends BaseLogFormatter {
     })}\n`;
   }
 
-  formatText(entry: LogEntry, config: LoggerConfig): string {
+  formatText(entry: LogEntry, _config: LoggerConfig): string {
     let output = '';
 
     // Add source information instead of timestamp
@@ -126,10 +126,7 @@ export class ColoredTextFormatter extends BaseLogFormatter {
 
       // Calculate total width for border
       const totalWidth =
-        headers.reduce(
-          (sum, header) => sum + (maxWidths[header] || header.length),
-          0
-        ) +
+        headers.reduce((sum, header) => sum + (maxWidths[header] || header.length), 0) +
         (headers.length - 1) * 3 +
         4;
 
@@ -138,27 +135,22 @@ export class ColoredTextFormatter extends BaseLogFormatter {
 
       // Header row with colored borders
       const headerCells = headers
-        .map(header =>
-          chalk.bold.blue(header.padEnd(maxWidths[header] || header.length))
-        )
+        .map((header) => chalk.bold.blue(header.padEnd(maxWidths[header] || header.length)))
         .join(chalk.blue(' │ '));
       lines.push(chalk.blue('│ ') + headerCells + chalk.blue(' │'));
 
       // Header separator
       const separatorCells = headers
-        .map(header => '─'.repeat(maxWidths[header] || header.length))
+        .map((header) => '─'.repeat(maxWidths[header] || header.length))
         .join(chalk.blue('─┼─'));
       lines.push(chalk.blue('├─') + separatorCells + chalk.blue('─┤'));
 
       // Data rows with colored borders
       for (const row of data) {
         const rowCells = headers
-          .map(header => {
+          .map((header) => {
             const displayValue = this.formatValueForDisplay(row[header]);
-            return this.padDisplay(
-              displayValue,
-              maxWidths[header] || header.length
-            );
+            return this.padDisplay(displayValue, maxWidths[header] || header.length);
           })
           .join(chalk.blue(' │ '));
 
@@ -202,8 +194,8 @@ export class ColoredTextFormatter extends BaseLogFormatter {
     if (/[\s_]/.test(cleanPrefix)) {
       return cleanPrefix
         .split(/[\s_]+/)
-        .filter(context => context.length > 0)
-        .map(context => context.toUpperCase());
+        .filter((context) => context.length > 0)
+        .map((context) => context.toUpperCase());
     }
 
     // For concatenated strings like "MONITORINGHEALTHMETRICS"
@@ -401,8 +393,7 @@ export class ColoredTextFormatter extends BaseLogFormatter {
   }
 
   private addData(data: unknown): string {
-    const dataStr =
-      typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    const dataStr = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
     return chalk.gray(` ${dataStr}`);
   }
 
@@ -476,8 +467,7 @@ export class ColoredTextFormatter extends BaseLogFormatter {
     if (typeof value === 'object') {
       // Truncate long JSON objects to prevent wrapping
       const jsonStr = JSON.stringify(value);
-      const truncatedStr =
-        jsonStr.length > 30 ? `${jsonStr.substring(0, 10)}...` : jsonStr;
+      const truncatedStr = jsonStr.length > 30 ? `${jsonStr.substring(0, 10)}...` : jsonStr;
       return chalk.yellow(truncatedStr);
     }
 
@@ -537,7 +527,7 @@ export class PlainTextFormatter extends BaseLogFormatter {
     })}\n`;
   }
 
-  formatText(entry: LogEntry, config: LoggerConfig): string {
+  formatText(entry: LogEntry, _config: LoggerConfig): string {
     let output = '';
 
     // Add source information instead of timestamp
@@ -553,10 +543,7 @@ export class PlainTextFormatter extends BaseLogFormatter {
     output += ` ${entry.message}`;
 
     if (entry.data) {
-      const dataStr =
-        typeof entry.data === 'string'
-          ? entry.data
-          : JSON.stringify(entry.data);
+      const dataStr = typeof entry.data === 'string' ? entry.data : JSON.stringify(entry.data);
       output += ` ${dataStr}`;
     }
 
@@ -582,10 +569,7 @@ export class PlainTextFormatter extends BaseLogFormatter {
 
       // Calculate total width for border
       const totalWidth =
-        headers.reduce(
-          (sum, header) => sum + (maxWidths[header] || header.length),
-          0
-        ) +
+        headers.reduce((sum, header) => sum + (maxWidths[header] || header.length), 0) +
         (headers.length - 1) * 3 +
         4;
 
@@ -594,20 +578,20 @@ export class PlainTextFormatter extends BaseLogFormatter {
 
       // Header row with borders
       const headerCells = headers
-        .map(header => header.padEnd(maxWidths[header] || header.length))
+        .map((header) => header.padEnd(maxWidths[header] || header.length))
         .join(' │ ');
       lines.push(`│ ${headerCells} │`);
 
       // Header separator
       const separatorCells = headers
-        .map(header => '─'.repeat(maxWidths[header] || header.length))
+        .map((header) => '─'.repeat(maxWidths[header] || header.length))
         .join('─┼─');
       lines.push(`├─${separatorCells}─┤`);
 
       // Data rows with borders
       for (const row of data) {
         const rowCells = headers
-          .map(header => {
+          .map((header) => {
             const value = row[header];
             let displayValue = '';
 
@@ -616,10 +600,7 @@ export class PlainTextFormatter extends BaseLogFormatter {
             } else if (typeof value === 'object') {
               // Truncate long JSON objects to prevent wrapping
               const jsonStr = JSON.stringify(value);
-              displayValue =
-                jsonStr.length > 30
-                  ? `${jsonStr.substring(0, 27)}...`
-                  : jsonStr;
+              displayValue = jsonStr.length > 30 ? `${jsonStr.substring(0, 27)}...` : jsonStr;
             } else {
               displayValue = String(value);
             }
@@ -661,10 +642,7 @@ export class PlainTextFormatter extends BaseLogFormatter {
     for (const row of data) {
       for (const header of headers) {
         const displayValue = this.formatValueForWidth(row[header]);
-        widths[header] = Math.max(
-          widths[header],
-          this.stripAnsi(displayValue).length
-        );
+        widths[header] = Math.max(widths[header], this.stripAnsi(displayValue).length);
       }
     }
 

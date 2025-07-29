@@ -22,8 +22,7 @@ export class LoggerBuilder implements ILoggerBuilder {
   private config: Partial<LoggerConfig> = {};
 
   setLevel(level: LogLevel | LogLevelString): ILoggerBuilder {
-    this.config.level =
-      typeof level === 'string' ? stringToLogLevel(level) : level;
+    this.config.level = typeof level === 'string' ? stringToLogLevel(level) : level;
     return this;
   }
 
@@ -83,22 +82,14 @@ export class LoggerBuilder implements ILoggerBuilder {
    * Build a JSON logger with common production settings
    */
   buildJsonLogger(): ILogger {
-    return this.setJson(true)
-      .setColors(false)
-      .setTimestamps(true)
-      .setShowSource(true)
-      .build();
+    return this.setJson(true).setColors(false).setTimestamps(true).setShowSource(true).build();
   }
 
   /**
    * Build a minimal logger with basic settings
    */
   buildMinimalLogger(): ILogger {
-    return this.setTimestamps(false)
-      .setColors(false)
-      .setShowSource(true)
-      .setJson(false)
-      .build();
+    return this.setTimestamps(false).setColors(false).setShowSource(true).setJson(false).build();
   }
 
   /**

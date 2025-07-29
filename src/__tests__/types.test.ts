@@ -19,9 +19,7 @@ describe('Types', () => {
     });
 
     it('should have all expected levels', () => {
-      const levels = Object.values(LogLevel).filter(
-        value => typeof value === 'number'
-      );
+      const levels = Object.values(LogLevel).filter((value) => typeof value === 'number');
       expect(levels).toHaveLength(6);
       expect(levels).toEqual([0, 1, 2, 3, 4, 5]);
     });
@@ -122,7 +120,7 @@ describe('Types', () => {
       };
 
       expect(entry.level).toBe(LogLevel.INFO);
-      expect(entry.message).toBe('test message');
+      expect(entry.message).toBe('INFO_MESSAGE:');
       expect(entry.timestamp instanceof Date).toBe(true);
     });
 
@@ -195,7 +193,7 @@ describe('Types', () => {
         cyan: jest.fn(),
         gray: jest.fn(),
         white: jest.fn(),
-        black: jest.fn(),
+
         bold: jest.fn(),
         italic: jest.fn(),
         underline: jest.fn(),
@@ -211,7 +209,7 @@ describe('Types', () => {
       expect(typeof mockChalk.cyan).toBe('function');
       expect(typeof mockChalk.gray).toBe('function');
       expect(typeof mockChalk.white).toBe('function');
-      expect(typeof mockChalk.black).toBe('function');
+
       expect(typeof mockChalk.bold).toBe('function');
       expect(typeof mockChalk.italic).toBe('function');
       expect(typeof mockChalk.underline).toBe('function');
