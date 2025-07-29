@@ -5,11 +5,11 @@
 
 import chalk from 'chalk';
 import {
+  type ChalkColor,
   type ILogFormatter,
   type LogEntry,
-  type LoggerConfig,
   LogLevel,
-  type ChalkColor,
+  type LoggerConfig,
 } from './types';
 
 /**
@@ -69,24 +69,22 @@ export class ColoredTextFormatter extends BaseLogFormatter {
   }
 
   formatJson(entry: LogEntry): string {
-    return (
-      JSON.stringify({
-        timestamp: entry.timestamp.toISOString(),
-        level: this.levelNames[entry.level],
-        message: entry.message,
-        data: entry.data,
-        prefix: entry.prefix,
-        source: entry.source,
-      }) + '\n'
-    );
+    return `${JSON.stringify({
+      timestamp: entry.timestamp.toISOString(),
+      level: this.levelNames[entry.level],
+      message: entry.message,
+      data: entry.data,
+      prefix: entry.prefix,
+      source: entry.source,
+    })}\n`;
   }
 
   formatText(entry: LogEntry, config: LoggerConfig): string {
     let output = '';
 
-    // Add timestamp
-    if (config.timestamps) {
-      output += this.addTimestamp(entry.timestamp, config);
+    // Add source information instead of timestamp
+    if (entry.source) {
+      output += this.addSource(entry.source);
     }
 
     // Add prefix
@@ -105,12 +103,7 @@ export class ColoredTextFormatter extends BaseLogFormatter {
       output += this.addData(entry.data);
     }
 
-    // Add source
-    if (entry.source && config.showSource) {
-      output += this.addSource(entry.source);
-    }
-
-    return output + '\n';
+    return `${output}\n`;
   }
 
   formatTable(
@@ -141,7 +134,7 @@ export class ColoredTextFormatter extends BaseLogFormatter {
         4;
 
       // Top border
-      lines.push(chalk.blue('┌' + '─'.repeat(totalWidth - 2) + '┐'));
+      lines.push(chalk.blue(`┌${'─'.repeat(totalWidth - 2)}┐`));
 
       // Header row with colored borders
       const headerCells = headers
@@ -158,32 +151,10 @@ export class ColoredTextFormatter extends BaseLogFormatter {
       lines.push(chalk.blue('├─') + separatorCells + chalk.blue('─┤'));
 
       // Data rows with colored borders
-      data.forEach((row, index) => {
+      for (const row of data) {
         const rowCells = headers
           .map(header => {
-            const value = row[header];
-            let displayValue = '';
-
-            if (value === null || value === undefined) {
-              displayValue = chalk.gray('null'); // Standardize to null
-            } else if (typeof value === 'string') {
-              displayValue = value;
-            } else if (typeof value === 'number') {
-              displayValue = chalk.cyan(value.toString());
-            } else if (typeof value === 'boolean') {
-              displayValue = value ? chalk.green('true') : chalk.red('false');
-            } else if (typeof value === 'object') {
-              // Truncate long JSON objects to prevent wrapping
-              const jsonStr = JSON.stringify(value);
-              const truncatedStr =
-                jsonStr.length > 30
-                  ? jsonStr.substring(0, 10) + '...'
-                  : jsonStr;
-              displayValue = chalk.yellow(truncatedStr);
-            } else {
-              displayValue = String(value);
-            }
-
+            const displayValue = this.formatValueForDisplay(row[header]);
             return this.padDisplay(
               displayValue,
               maxWidths[header] || header.length
@@ -192,125 +163,133 @@ export class ColoredTextFormatter extends BaseLogFormatter {
           .join(chalk.blue(' │ '));
 
         lines.push(chalk.blue('│ ') + rowCells + chalk.blue(' │'));
-      });
+      }
 
       // Bottom border
-      lines.push(chalk.blue('└' + '─'.repeat(totalWidth - 2) + '┘'));
+      lines.push(chalk.blue(`└${'─'.repeat(totalWidth - 2)}┘`));
     }
 
     return lines;
   }
 
-  private addTimestamp(timestamp: Date, config: LoggerConfig): string {
+  private addTimestamp(timestamp: Date, _config: LoggerConfig): string {
     const timeStr = timestamp.toLocaleTimeString();
     return chalk.gray(`[${timeStr}]`);
   }
 
   private addPrefix(prefix: string | string[]): string {
-    let contexts: string[];
+    const contexts = this.parseContexts(prefix);
+    const joinedContext = contexts.join('\u00A0');
+    return joinedContext ? ` ${this.getContextColor(joinedContext)}` : ' ';
+  }
 
+  private parseContexts(prefix: string | string[]): string[] {
     if (Array.isArray(prefix)) {
-      // Use all contexts from array
-      contexts = prefix;
-    } else if (typeof prefix === 'string') {
-      // Handle different string formats
-      let cleanPrefix = prefix.replace(/[\[\]]/g, ''); // Remove brackets
-
-      // If it's already space/underscore separated, split normally
-      if (/[\s_]/.test(cleanPrefix)) {
-        contexts = cleanPrefix
-          .split(/[\s_]+/)
-          .filter(context => context.length > 0)
-          .map(context => context.toUpperCase());
-      } else {
-        // For concatenated strings like "MONITORINGHEALTHMETRICS"
-        // Manually split on common context boundaries
-        const knownContexts = [
-          'MONITORING',
-          'HEALTH',
-          'METRICS',
-          'SYSTEM',
-          'API',
-          'DATABASE',
-          'AUTH',
-          'SECURITY',
-          'FILE',
-          'NETWORK',
-          'CACHE',
-          'QUEUE',
-          'VALIDATION',
-          'PERFORMANCE',
-          'ALERTING',
-          'PROFILING',
-          'BENCHMARK',
-          'STARTUP',
-          'SHUTDOWN',
-          'RELOAD',
-          'HOT_RELOAD',
-          'MIGRATION',
-          'SEED',
-          'BACKUP',
-          'RESTORE',
-          'UPLOAD',
-          'DOWNLOAD',
-          'EXPORT',
-          'IMPORT',
-          'READ',
-          'WRITE',
-          'WEBSOCKET',
-          'GRAPHQL',
-          'REST',
-          'HTTP',
-          'REQUEST',
-          'RESPONSE',
-          'JWT',
-          'OAUTH',
-          'PERMISSION',
-          'LOGIN',
-          'LOGOUT',
-          'RATE_LIMIT',
-          'CORS',
-          'HELMET',
-          'POSTGRES',
-          'MYSQL',
-          'MONGODB',
-          'REDIS',
-          'ELASTICSEARCH',
-          'AWS',
-          'GOOGLE',
-          'STRIPE',
-          'TWILIO',
-          'SENDGRID',
-          'PAYMENT',
-          'EMAIL',
-          'NOTIFICATION',
-          'KAFKA',
-          'RABBITMQ',
-          'SCHEDULER',
-          'COMPRESSION',
-          'STATIC',
-        ];
-
-        // Try to find known contexts in the string
-        const foundContexts: string[] = [];
-        let remaining = cleanPrefix.toUpperCase();
-
-        for (const context of knownContexts) {
-          if (remaining.includes(context)) {
-            foundContexts.push(context);
-            remaining = remaining.replace(context, '');
-          }
-        }
-
-        // If we found contexts, use them; otherwise use the original string
-        contexts = foundContexts.length > 0 ? foundContexts : [cleanPrefix];
-      }
-    } else {
-      contexts = [String(prefix)];
+      return prefix;
     }
 
-    const joinedContext = contexts.join('\u00A0');
-    return joinedContext ? ' ' + this.getContextColor(joinedContext) + '' : ' ';
+    if (typeof prefix === 'string') {
+      return this.parseStringContexts(prefix);
+    }
+
+    return [String(prefix)];
+  }
+
+  private parseStringContexts(prefix: string): string[] {
+    const cleanPrefix = prefix.replace(/[\[\]]/g, ''); // Remove brackets
+
+    // If it's already space/underscore separated, split normally
+    if (/[\s_]/.test(cleanPrefix)) {
+      return cleanPrefix
+        .split(/[\s_]+/)
+        .filter(context => context.length > 0)
+        .map(context => context.toUpperCase());
+    }
+
+    // For concatenated strings like "MONITORINGHEALTHMETRICS"
+    return this.splitConcatenatedContexts(cleanPrefix);
+  }
+
+  private splitConcatenatedContexts(cleanPrefix: string): string[] {
+    const knownContexts = [
+      'MONITORING',
+      'HEALTH',
+      'METRICS',
+      'SYSTEM',
+      'API',
+      'DATABASE',
+      'AUTH',
+      'SECURITY',
+      'FILE',
+      'NETWORK',
+      'CACHE',
+      'QUEUE',
+      'VALIDATION',
+      'PERFORMANCE',
+      'ALERTING',
+      'PROFILING',
+      'BENCHMARK',
+      'STARTUP',
+      'SHUTDOWN',
+      'RELOAD',
+      'HOT_RELOAD',
+      'MIGRATION',
+      'SEED',
+      'BACKUP',
+      'RESTORE',
+      'UPLOAD',
+      'DOWNLOAD',
+      'EXPORT',
+      'IMPORT',
+      'READ',
+      'WRITE',
+      'WEBSOCKET',
+      'GRAPHQL',
+      'REST',
+      'HTTP',
+      'REQUEST',
+      'RESPONSE',
+      'JWT',
+      'OAUTH',
+      'PERMISSION',
+      'LOGIN',
+      'LOGOUT',
+      'RATE_LIMIT',
+      'CORS',
+      'HELMET',
+      'POSTGRES',
+      'MYSQL',
+      'MONGODB',
+      'REDIS',
+      'ELASTICSEARCH',
+      'AWS',
+      'GOOGLE',
+      'STRIPE',
+      'TWILIO',
+      'SENDGRID',
+      'PAYMENT',
+      'EMAIL',
+      'NOTIFICATION',
+      'KAFKA',
+      'RABBITMQ',
+      'SCHEDULER',
+      'COMPRESSION',
+      'STATIC',
+    ];
+
+    // Try to find known contexts in the string
+    const foundContexts: string[] = [];
+    let remaining = cleanPrefix.toUpperCase();
+
+    for (const context of knownContexts) {
+      if (remaining.includes(context)) {
+        foundContexts.push(context);
+        remaining = remaining.replace(context, '');
+      }
+    }
+
+    // If we found contexts, use them; otherwise use the original string
+    return foundContexts.length > 0 ? foundContexts : [cleanPrefix];
   }
 
   private getContextColor(context: string): string {
@@ -428,7 +407,7 @@ export class ColoredTextFormatter extends BaseLogFormatter {
   }
 
   private addSource(source: string): string {
-    return chalk.gray(` (${source})`);
+    return chalk.gray(` [${source}]`);
   }
 
   private calculateColumnWidths(
@@ -437,32 +416,17 @@ export class ColoredTextFormatter extends BaseLogFormatter {
   ): Record<string, number> {
     const widths: Record<string, number> = {};
 
-    headers.forEach(header => {
+    for (const header of headers) {
       widths[header] = header.length;
-    });
+    }
 
-    data.forEach(row => {
-      headers.forEach(header => {
-        const value = row[header];
-        let displayValue = '';
-
-        if (value === null || value === undefined) {
-          displayValue = 'null'; // Standardize to null
-        } else if (typeof value === 'object') {
-          // Truncate long JSON objects to prevent wrapping
-          const jsonStr = JSON.stringify(value);
-          displayValue =
-            jsonStr.length > 30 ? jsonStr.substring(0, 27) + '...' : jsonStr;
-        } else {
-          displayValue = String(value);
-        }
-
-        // For ColoredTextFormatter, we need to account for ANSI color codes
-        // by stripping them for width calculation
+    for (const row of data) {
+      for (const header of headers) {
+        const displayValue = this.formatValueForWidth(row[header]);
         const strippedValue = this.stripAnsi(displayValue);
         widths[header] = Math.max(widths[header] || 0, strippedValue.length);
-      });
-    });
+      }
+    }
 
     return widths;
   }
@@ -477,38 +441,78 @@ export class ColoredTextFormatter extends BaseLogFormatter {
     const padding = targetWidth - strippedLength;
     return str + ' '.repeat(Math.max(0, padding));
   }
+
+  private formatValueForWidth(value: unknown): string {
+    if (value === null || value === undefined) {
+      return 'null'; // Standardize to null
+    }
+
+    if (typeof value === 'object') {
+      // Truncate long JSON objects to prevent wrapping
+      const jsonStr = JSON.stringify(value);
+      return jsonStr.length > 30 ? `${jsonStr.substring(0, 27)}...` : jsonStr;
+    }
+
+    return String(value);
+  }
+
+  private formatValueForDisplay(value: unknown): string {
+    if (value === null || value === undefined) {
+      return chalk.gray('null'); // Standardize to null
+    }
+
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    if (typeof value === 'number') {
+      return chalk.cyan(value.toString());
+    }
+
+    if (typeof value === 'boolean') {
+      return value ? chalk.green('true') : chalk.red('false');
+    }
+
+    if (typeof value === 'object') {
+      // Truncate long JSON objects to prevent wrapping
+      const jsonStr = JSON.stringify(value);
+      const truncatedStr =
+        jsonStr.length > 30 ? `${jsonStr.substring(0, 10)}...` : jsonStr;
+      return chalk.yellow(truncatedStr);
+    }
+
+    return String(value);
+  }
 }
 
 /**
  * Strategy Pattern - JSON Formatter Strategy
  */
 export class JsonFormatter extends BaseLogFormatter {
-  formatLogEntry(entry: LogEntry, config: LoggerConfig): string {
+  formatLogEntry(entry: LogEntry, _config: LoggerConfig): string {
     return this.formatJson(entry);
   }
 
   formatJson(entry: LogEntry): string {
-    return (
-      JSON.stringify({
-        timestamp: entry.timestamp.toISOString(),
-        level: this.levelNames[entry.level],
-        message: entry.message,
-        data: entry.data,
-        prefix: entry.prefix,
-        source: entry.source,
-      }) + '\n'
-    );
+    return `${JSON.stringify({
+      timestamp: entry.timestamp.toISOString(),
+      level: this.levelNames[entry.level],
+      message: entry.message,
+      data: entry.data,
+      prefix: entry.prefix,
+      source: entry.source,
+    })}\n`;
   }
 
-  formatText(entry: LogEntry, config: LoggerConfig): string {
+  formatText(entry: LogEntry, _config: LoggerConfig): string {
     return this.formatJson(entry);
   }
 
   formatTable(
     entry: LogEntry,
-    data: Record<string, unknown>[],
-    config: LoggerConfig,
-    options: { headers?: string[]; border?: boolean }
+    _data: Record<string, unknown>[],
+    _config: LoggerConfig,
+    _options: { headers?: string[]; border?: boolean }
   ): string[] {
     return [this.formatJson(entry)];
   }
@@ -523,23 +527,22 @@ export class PlainTextFormatter extends BaseLogFormatter {
   }
 
   formatJson(entry: LogEntry): string {
-    return (
-      JSON.stringify({
-        timestamp: entry.timestamp.toISOString(),
-        level: this.levelNames[entry.level],
-        message: entry.message,
-        data: entry.data,
-        prefix: entry.prefix,
-        source: entry.source,
-      }) + '\n'
-    );
+    return `${JSON.stringify({
+      timestamp: entry.timestamp.toISOString(),
+      level: this.levelNames[entry.level],
+      message: entry.message,
+      data: entry.data,
+      prefix: entry.prefix,
+      source: entry.source,
+    })}\n`;
   }
 
   formatText(entry: LogEntry, config: LoggerConfig): string {
     let output = '';
 
-    if (config.timestamps) {
-      output += `[${entry.timestamp.toLocaleTimeString()}]`;
+    // Add source information instead of timestamp
+    if (entry.source) {
+      output += `[${entry.source}]`;
     }
 
     if (entry.prefix) {
@@ -557,11 +560,7 @@ export class PlainTextFormatter extends BaseLogFormatter {
       output += ` ${dataStr}`;
     }
 
-    if (entry.source && config.showSource) {
-      output += ` (${entry.source})`;
-    }
-
-    return output + '\n';
+    return `${output}\n`;
   }
 
   formatTable(
@@ -591,22 +590,22 @@ export class PlainTextFormatter extends BaseLogFormatter {
         4;
 
       // Top border
-      lines.push('┌' + '─'.repeat(totalWidth - 2) + '┐');
+      lines.push(`┌${'─'.repeat(totalWidth - 2)}┐`);
 
       // Header row with borders
       const headerCells = headers
         .map(header => header.padEnd(maxWidths[header] || header.length))
         .join(' │ ');
-      lines.push('│ ' + headerCells + ' │');
+      lines.push(`│ ${headerCells} │`);
 
       // Header separator
       const separatorCells = headers
         .map(header => '─'.repeat(maxWidths[header] || header.length))
         .join('─┼─');
-      lines.push('├─' + separatorCells + '─┤');
+      lines.push(`├─${separatorCells}─┤`);
 
       // Data rows with borders
-      data.forEach(row => {
+      for (const row of data) {
         const rowCells = headers
           .map(header => {
             const value = row[header];
@@ -619,7 +618,7 @@ export class PlainTextFormatter extends BaseLogFormatter {
               const jsonStr = JSON.stringify(value);
               displayValue =
                 jsonStr.length > 30
-                  ? jsonStr.substring(0, 27) + '...'
+                  ? `${jsonStr.substring(0, 27)}...`
                   : jsonStr;
             } else {
               displayValue = String(value);
@@ -629,11 +628,11 @@ export class PlainTextFormatter extends BaseLogFormatter {
           })
           .join(' │ ');
 
-        lines.push('│ ' + rowCells + ' │');
-      });
+        lines.push(`│ ${rowCells} │`);
+      }
 
       // Bottom border
-      lines.push('└' + '─'.repeat(totalWidth - 2) + '┘');
+      lines.push(`└${'─'.repeat(totalWidth - 2)}┘`);
     }
 
     return lines;
@@ -655,34 +654,35 @@ export class PlainTextFormatter extends BaseLogFormatter {
   ): Record<string, number> {
     const widths: Record<string, number> = {};
 
-    headers.forEach(header => {
+    for (const header of headers) {
       widths[header] = header.length;
-    });
+    }
 
-    data.forEach(row => {
-      headers.forEach(header => {
-        const value = row[header];
-        let displayValue = '';
-
-        if (value === null || value === undefined) {
-          displayValue = 'null'; // Standardize to null
-        } else if (typeof value === 'object') {
-          // Truncate long JSON objects to prevent wrapping
-          const jsonStr = JSON.stringify(value);
-          displayValue =
-            jsonStr.length > 30 ? jsonStr.substring(0, 27) + '...' : jsonStr;
-        } else {
-          displayValue = String(value);
-        }
-
+    for (const row of data) {
+      for (const header of headers) {
+        const displayValue = this.formatValueForWidth(row[header]);
         widths[header] = Math.max(
           widths[header],
           this.stripAnsi(displayValue).length
         );
-      });
-    });
+      }
+    }
 
     return widths;
+  }
+
+  private formatValueForWidth(value: unknown): string {
+    if (value === null || value === undefined) {
+      return 'null'; // Standardize to null
+    }
+
+    if (typeof value === 'object') {
+      // Truncate long JSON objects to prevent wrapping
+      const jsonStr = JSON.stringify(value);
+      return jsonStr.length > 30 ? `${jsonStr.substring(0, 27)}...` : jsonStr;
+    }
+
+    return String(value);
   }
 }
 

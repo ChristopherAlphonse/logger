@@ -26,7 +26,8 @@
       },
       "suspicious": {
         "noExplicitAny": "warn",
-        "noConsoleLog": "warn"
+        "noConsoleLog": "warn",
+        "noControlCharactersInRegex": "off"
       },
       "style": {
         "useConst": "error",

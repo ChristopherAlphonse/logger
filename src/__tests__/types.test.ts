@@ -19,9 +19,11 @@ describe('Types', () => {
     });
 
     it('should have all expected levels', () => {
-      const levels = Object.values(LogLevel).filter((value) => typeof value === 'number');
-      expect(levels).toHaveLength(5);
-      expect(levels).toEqual([0, 1, 2, 3, 4]);
+      const levels = Object.values(LogLevel).filter(
+        value => typeof value === 'number'
+      );
+      expect(levels).toHaveLength(6);
+      expect(levels).toEqual([0, 1, 2, 3, 4, 5]);
     });
   });
 
@@ -77,17 +79,17 @@ describe('Types', () => {
       const mockStream = { write: jest.fn() };
       const config: LoggerConfig = {
         level: LogLevel.DEBUG,
-        timestamps: true,
+        timestamps: false, // Default is now false
         colors: false,
         timestampFormat: 'HH:mm:ss',
-        showSource: true,
+        showSource: true, // Default is now true
         prefix: 'TEST',
         json: true,
         output: mockStream as unknown as NodeJS.WritableStream,
       };
 
       expect(config.level).toBe(LogLevel.DEBUG);
-      expect(config.timestamps).toBe(true);
+      expect(config.timestamps).toBe(false);
       expect(config.colors).toBe(false);
       expect(config.timestampFormat).toBe('HH:mm:ss');
       expect(config.showSource).toBe(true);
@@ -115,7 +117,7 @@ describe('Types', () => {
     it('should have required properties', () => {
       const entry: LogEntry = {
         level: LogLevel.INFO,
-        message: 'test message',
+        message: 'INFO_MESSAGE:',
         timestamp: new Date(),
       };
 
@@ -127,7 +129,7 @@ describe('Types', () => {
     it('should allow optional properties', () => {
       const entry: LogEntry = {
         level: LogLevel.ERROR,
-        message: 'error message',
+        message: 'ERROR_MESSAGE:',
         timestamp: new Date(),
         source: 'test.ts:10',
         data: { error: 'details' },

@@ -13,7 +13,7 @@ describe('Index exports', () => {
       expect(typeof logger.info).toBe('function');
       expect(typeof logger.debug).toBe('function');
       expect(typeof logger.trace).toBe('function');
-      expect(typeof logger.log).toBe('object');
+      expect(typeof logger.log).toBe('function');
       expect(typeof logger.setLevel).toBe('function');
       expect(typeof logger.setConfig).toBe('function');
       expect(typeof logger.getConfig).toBe('function');

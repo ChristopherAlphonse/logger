@@ -10,14 +10,7 @@ export enum LogLevel {
 /**
  * String-based log levels for easier configuration
  */
-export type LogLevelString =
-  | 'error'
-  | 'warn'
-  | 'info'
-  | 'debug'
-  | 'trace'
-  | 'silent'
-  | 'log';
+export type LogLevelString = 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent' | 'log';
 
 /**
  * Convert string log level to enum
@@ -112,9 +105,7 @@ export interface ILogger {
   log(level: LogLevel, message: string, data?: LogData): void;
   table(
     dataOrLevel: LogLevel | Record<string, unknown>[] | Record<string, unknown>,
-    dataOrOptions?:
-      | Record<string, unknown>[]
-      | { headers?: string[]; border?: boolean },
+    dataOrOptions?: Record<string, unknown>[] | { headers?: string[]; border?: boolean },
     options?: { headers?: string[]; border?: boolean }
   ): void;
   setLevel(level: LogLevel | LogLevelString): void;
@@ -130,41 +121,15 @@ export interface ILogger {
  * Enhanced Logger interface with context support and console-like API
  */
 export interface IEnhancedLogger {
-  log(
-    message: string,
-    data?: LogData | LogContextString[],
-    contexts?: LogContextString[]
-  ): void;
-  error(
-    message: string,
-    data?: LogData | LogContextString[],
-    contexts?: LogContextString[]
-  ): void;
-  warn(
-    message: string,
-    data?: LogData | LogContextString[],
-    contexts?: LogContextString[]
-  ): void;
-  info(
-    message: string,
-    data?: LogData | LogContextString[],
-    contexts?: LogContextString[]
-  ): void;
-  debug(
-    message: string,
-    data?: LogData | LogContextString[],
-    contexts?: LogContextString[]
-  ): void;
-  trace(
-    message: string,
-    data?: LogData | LogContextString[],
-    contexts?: LogContextString[]
-  ): void;
+  log(message: string, data?: LogData | LogContextString[], contexts?: LogContextString[]): void;
+  error(message: string, data?: LogData | LogContextString[], contexts?: LogContextString[]): void;
+  warn(message: string, data?: LogData | LogContextString[], contexts?: LogContextString[]): void;
+  info(message: string, data?: LogData | LogContextString[], contexts?: LogContextString[]): void;
+  debug(message: string, data?: LogData | LogContextString[], contexts?: LogContextString[]): void;
+  trace(message: string, data?: LogData | LogContextString[], contexts?: LogContextString[]): void;
   table(
     dataOrLevel: LogLevel | Record<string, unknown>[] | Record<string, unknown>,
-    dataOrOptions?:
-      | Record<string, unknown>[]
-      | { headers?: string[]; border?: boolean },
+    dataOrOptions?: Record<string, unknown>[] | { headers?: string[]; border?: boolean },
     options?: { headers?: string[]; border?: boolean }
   ): void;
   setLevel(level: LogLevel | LogLevelString): void;
@@ -233,17 +198,13 @@ export type LogContextString =
   | 'ALERTING'
   | 'METRICS'
   | 'HEALTH'
-  | 'READINESS'
-  | 'LIVENESS'
-  | 'GRACEFUL_SHUTDOWN'
   | 'STARTUP'
   | 'SHUTDOWN'
   | 'RELOAD'
   | 'HOT_RELOAD'
   | 'DEBUG'
   | 'TRACE'
-  | 'VERBOSE'
-  | 'SILENT';
+  | 'VERBOSE';
 
 /**
  * Chalk color function type
@@ -337,6 +298,4 @@ export interface ILoggerBuilder {
   buildJsonLogger(): ILogger;
   buildMinimalLogger(): ILogger;
   buildVerboseLogger(): ILogger;
-  buildDevelopmentLogger(): ILogger;
-  buildProductionLogger(): ILogger;
 }

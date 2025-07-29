@@ -86,7 +86,7 @@ export class LoggerBuilder implements ILoggerBuilder {
     return this.setJson(true)
       .setColors(false)
       .setTimestamps(true)
-      .setShowSource(false)
+      .setShowSource(true)
       .build();
   }
 
@@ -96,7 +96,7 @@ export class LoggerBuilder implements ILoggerBuilder {
   buildMinimalLogger(): ILogger {
     return this.setTimestamps(false)
       .setColors(false)
-      .setShowSource(false)
+      .setShowSource(true)
       .setJson(false)
       .build();
   }
@@ -110,30 +110,6 @@ export class LoggerBuilder implements ILoggerBuilder {
       .setColors(true)
       .setShowSource(true)
       .setJson(false)
-      .build();
-  }
-
-  /**
-   * Build a development logger with colored output
-   */
-  buildDevelopmentLogger(): ILogger {
-    return this.setLevel(LogLevelEnum.DEBUG)
-      .setTimestamps(true)
-      .setColors(true)
-      .setShowSource(true)
-      .setJson(false)
-      .build();
-  }
-
-  /**
-   * Build a production logger with JSON output
-   */
-  buildProductionLogger(): ILogger {
-    return this.setLevel(LogLevelEnum.WARN)
-      .setJson(true)
-      .setColors(false)
-      .setTimestamps(true)
-      .setShowSource(false)
       .build();
   }
 }

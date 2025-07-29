@@ -33,8 +33,7 @@ export class ConsoleLogImplementation implements ILogImplementation {
       const match = RegExp(/at\s+(.+?)\s+\((.+):(\d+):(\d+)\)/).exec(line);
       if (match) {
         const [, _functionName, filePath, lineNum] = match;
-        const fileName =
-          filePath.split('/').pop()?.split('\\').pop() || 'unknown';
+        const fileName = filePath.split('/').pop()?.split('\\').pop() || 'unknown';
         return `${fileName}:${lineNum}`;
       }
     }

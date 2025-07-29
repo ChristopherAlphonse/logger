@@ -1,6 +1,6 @@
+import { ColoredTextFormatter } from './formatters';
 import { ConsoleLogImplementation } from './implementations';
 import { loggerRegistry } from './registry';
-import { ColoredTextFormatter } from './formatters';
 import {
   type ILogFormatter,
   type ILogImplementation,
@@ -51,15 +51,16 @@ export class Logger implements ILogger {
    *   level: LogLevel.DEBUG,
    *   prefix: 'MyApp',
    *   colors: true,
-   *   timestamps: true,
-   *   showSource: true
+   *   timestamps: false, // Disabled by default, shows source info instead
+   *   showSource: true   // Enabled by default
    * });
    *
    * // JSON output for production
    * const logger = new Logger({
    *   json: true,
    *   colors: false,
-   *   level: LogLevel.WARN
+   *   level: LogLevel.WARN,
+   *   timestamps: true  // Enable timestamps for production logs
    * });
    * ```
    */
@@ -70,10 +71,10 @@ export class Logger implements ILogger {
   ) {
     this.config = {
       level: LogLevel.INFO,
-      timestamps: true,
+      timestamps: false, // Disable timestamps by default
       colors: true,
       timestampFormat: 'HH:mm:ss',
-      showSource: false,
+      showSource: true, // Enable source info by default
       prefix: '',
       json: false,
       output: process.stdout,
@@ -186,11 +187,8 @@ export class Logger implements ILogger {
       timestamp: new Date(),
       data,
       prefix: this.config.prefix,
+      source: this.implementation.getSourceInfo(), // Always capture source info
     };
-
-    if (this.config.showSource) {
-      entry.source = this.implementation.getSourceInfo();
-    }
 
     // Call custom handler if set
     const handler = this.getHandler();
@@ -447,15 +445,12 @@ export class Logger implements ILogger {
 
     const entry: LogEntry = {
       level,
-      message: 'Table data',
+      message: 'TABLE_DATA:',
       timestamp: new Date(),
       data,
       prefix: this.config.prefix,
+      source: this.implementation.getSourceInfo(), // Always capture source info
     };
-
-    if (this.config.showSource) {
-      entry.source = this.implementation.getSourceInfo();
-    }
 
     if (this.config.json) {
       const output = this.formatter.formatJson(entry);
@@ -468,7 +463,7 @@ export class Logger implements ILogger {
         finalOptions
       );
       for (const output of outputs) {
-        this.implementation.write(output + '\n');
+        this.implementation.write(`${output}\n`);
       }
     }
   }
