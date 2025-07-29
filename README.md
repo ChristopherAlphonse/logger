@@ -38,6 +38,33 @@ yarn add @calphonse/logger
 
 ## Quick Start
 
+### Enhanced API (Recommended)
+
+```typescript
+import { logger, LogContext } from '@calphonse/logger';
+
+// Basic usage - just like console.log but better!
+logger.log('Application started');
+
+// With data object
+logger.log('User data received', { userId: 123, name: 'John Doe' });
+
+// With context (the new API you requested!)
+logger.log('Query executed', { query: 'SELECT * FROM users' }, ['DATABASE']);
+
+// With multiple contexts
+logger.log('User authenticated', { userId: 123 }, ['AUTH', 'SECURITY']);
+
+// Different log levels with contexts
+logger.error('Database connection failed', { error: 'Connection timeout' }, [
+  'DATABASE',
+]);
+logger.warn('Rate limit approaching', { requests: 95, limit: 100 }, ['API']);
+logger.info('Payment processed', { amount: 29.99 }, ['PAYMENT']);
+```
+
+### Classic API (Still Supported)
+
 ```typescript
 import { logger } from '@calphonse/logger';
 
@@ -112,6 +139,63 @@ const apiLogger = logger.child('[API]');
 userLogger.info('User created', { userId: '123' });
 dbLogger.info('Query executed', { query: 'SELECT * FROM users' });
 apiLogger.info('Request processed', { endpoint: '/api/users' });
+```
+
+### Enhanced Context API (New!)
+
+Instead of creating child loggers, use the new context-based API:
+
+```typescript
+import { logger, LogContext } from '@calphonse/logger';
+
+// No need to create child loggers!
+logger.log('User created', { userId: '123' }, ['AUTH']);
+logger.log('Query executed', { query: 'SELECT * FROM users' }, ['DATABASE']);
+logger.log('Request processed', { endpoint: '/api/users' }, ['API']);
+
+// Multiple contexts for complex operations
+logger.log('User authenticated', { userId: '123' }, [
+  'AUTH',
+  'SECURITY',
+  'JWT',
+]);
+```
+
+### Available Contexts
+
+The enhanced logger comes with 50+ preset contexts for common scenarios:
+
+```typescript
+import { LogContext } from '@calphonse/logger';
+
+// Core contexts
+LogContext.AUTH;
+LogContext.DATABASE;
+LogContext.API;
+
+// Database contexts
+LogContext.REDIS;
+LogContext.MONGODB;
+LogContext.POSTGRES;
+LogContext.MYSQL;
+LogContext.ELASTICSEARCH;
+
+// Service contexts
+LogContext.CACHE;
+LogContext.EMAIL;
+LogContext.PAYMENT;
+LogContext.NOTIFICATION;
+LogContext.SECURITY;
+LogContext.PERFORMANCE;
+
+// Third-party services
+LogContext.AWS;
+LogContext.GOOGLE;
+LogContext.STRIPE;
+LogContext.TWILIO;
+LogContext.SENDGRID;
+
+// And many more...
 ```
 
 ### Flexible Configuration

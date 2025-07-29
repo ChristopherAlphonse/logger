@@ -30,7 +30,7 @@ export function stringToLogLevel(level: LogLevelString): LogLevel {
     debug: LogLevel.DEBUG,
     trace: LogLevel.TRACE,
     silent: LogLevel.ERROR + 1,
-    log: LogLevel.LOG,
+    log: LogLevel.Log,
   };
   return levelMap[level];
 }
@@ -45,7 +45,7 @@ export function logLevelToString(level: LogLevel): LogLevelString {
     [LogLevel.INFO]: 'info',
     [LogLevel.DEBUG]: 'debug',
     [LogLevel.TRACE]: 'trace',
-    [LogLevel.LOG]: 'log',
+    [LogLevel.Log]: 'log',
   };
   return stringMap[level] ?? 'info';
 }
@@ -125,6 +125,125 @@ export interface ILogger {
   setHandler(handler: LogHandler | null): void;
   getHandler(): LogHandler | null;
 }
+
+/**
+ * Enhanced Logger interface with context support and console-like API
+ */
+export interface IEnhancedLogger {
+  log(
+    message: string,
+    data?: LogData | LogContextString[],
+    contexts?: LogContextString[]
+  ): void;
+  error(
+    message: string,
+    data?: LogData | LogContextString[],
+    contexts?: LogContextString[]
+  ): void;
+  warn(
+    message: string,
+    data?: LogData | LogContextString[],
+    contexts?: LogContextString[]
+  ): void;
+  info(
+    message: string,
+    data?: LogData | LogContextString[],
+    contexts?: LogContextString[]
+  ): void;
+  debug(
+    message: string,
+    data?: LogData | LogContextString[],
+    contexts?: LogContextString[]
+  ): void;
+  trace(
+    message: string,
+    data?: LogData | LogContextString[],
+    contexts?: LogContextString[]
+  ): void;
+  table(
+    dataOrLevel: LogLevel | Record<string, unknown>[] | Record<string, unknown>,
+    dataOrOptions?:
+      | Record<string, unknown>[]
+      | { headers?: string[]; border?: boolean },
+    options?: { headers?: string[]; border?: boolean }
+  ): void;
+  setLevel(level: LogLevel | LogLevelString): void;
+  setConfig(config: Partial<LoggerConfig>): void;
+  getConfig(): LoggerConfig;
+  isEnabled(level: LogLevel): boolean;
+  child(prefix: string): ILogger;
+  setHandler(handler: LogHandler | null): void;
+  getHandler(): LogHandler | null;
+}
+
+/**
+ * Type for context strings - provides autocomplete for common contexts
+ */
+export type LogContextString =
+  | 'AUTH'
+  | 'DATABASE'
+  | 'API'
+  | 'CACHE'
+  | 'EMAIL'
+  | 'PAYMENT'
+  | 'NOTIFICATION'
+  | 'VALIDATION'
+  | 'SECURITY'
+  | 'PERFORMANCE'
+  | 'FILE'
+  | 'NETWORK'
+  | 'QUEUE'
+  | 'SCHEDULER'
+  | 'WEBSOCKET'
+  | 'GRAPHQL'
+  | 'REDIS'
+  | 'MONGODB'
+  | 'POSTGRES'
+  | 'MYSQL'
+  | 'ELASTICSEARCH'
+  | 'KAFKA'
+  | 'RABBITMQ'
+  | 'AWS'
+  | 'GOOGLE'
+  | 'STRIPE'
+  | 'TWILIO'
+  | 'SENDGRID'
+  | 'JWT'
+  | 'OAUTH'
+  | 'RATE_LIMIT'
+  | 'CORS'
+  | 'HELMET'
+  | 'COMPRESSION'
+  | 'STATIC'
+  | 'UPLOAD'
+  | 'DOWNLOAD'
+  | 'EXPORT'
+  | 'IMPORT'
+  | 'BACKUP'
+  | 'RESTORE'
+  | 'MIGRATION'
+  | 'SEED'
+  | 'TEST'
+  | 'E2E'
+  | 'UNIT'
+  | 'INTEGRATION'
+  | 'BENCHMARK'
+  | 'PROFILING'
+  | 'MONITORING'
+  | 'ALERTING'
+  | 'METRICS'
+  | 'HEALTH'
+  | 'READINESS'
+  | 'LIVENESS'
+  | 'GRACEFUL_SHUTDOWN'
+  | 'STARTUP'
+  | 'SHUTDOWN'
+  | 'RELOAD'
+  | 'HOT_RELOAD'
+  | 'DEBUG'
+  | 'TRACE'
+  | 'VERBOSE'
+  | 'SILENT';
 
 /**
  * Chalk color function type

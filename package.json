@@ -6,12 +6,21 @@
   "homepage": "https://github.com/ChristopherAlphonse/logger",
   "repository": "github:ChristopherAlphonse/logger",
   "license": "MIT",
-  "keywords": ["logger", "logging", "chalk", "colors", "console", "utility"],
+  "keywords": [
+    "logger",
+    "logging",
+    "chalk",
+    "colors",
+    "console",
+    "utility"
+  ],
   "main": "dist/index.cjs.js",
   "module": "dist/index.es.js",
   "types": "dist/index.d.ts",
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build",
@@ -38,6 +47,15 @@
     "audit:fix": "pnpm audit --fix",
     "example:basic": "tsx examples/basic-usage.ts",
     "example:error": "tsx examples/error-handling-demo.ts",
+    "test:enhanced": "node test-string-contexts.js",
+    "test:colors": "node test-colors.js",
+    "test:table": "node test-table.js",
+    "test:bordered": "node test-bordered-table.js",
+    "test:clean": "node test-clean-table.js",
+    "test:bordered-final": "node test-bordered-table-final.js",
+    "demo": "tsx examples/demo.ts",
+    "test:colors": "node test-colored-contexts.js",
+    "test:spacing": "node test-spacing.js",
     "publish-package": "pnpm publish --access public",
     "publish-package-canary": "pnpm publish --tag canary --access public"
   },

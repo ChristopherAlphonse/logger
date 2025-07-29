@@ -1,5 +1,6 @@
 import { ConsoleLogImplementation } from './implementations';
 import { loggerRegistry } from './registry';
+import { ColoredTextFormatter } from './formatters';
 import {
   type ILogFormatter,
   type ILogImplementation,
@@ -79,66 +80,8 @@ export class Logger implements ILogger {
       ...config,
     };
 
-    // Use provided formatter or fallback to a basic one
-    this.formatter = formatter || {
-      formatLogEntry: (entry, config) => {
-        return config.json
-          ? JSON.stringify({
-              timestamp: entry.timestamp,
-              level: logLevelToString(entry.level),
-              message: entry.message,
-              data: entry.data,
-              prefix: entry.prefix,
-              source: entry.source,
-            }) + '\n'
-          : (() => {
-              const prefixPart = entry.prefix ? ' [' + entry.prefix + ']' : '';
-              return `[${entry.timestamp.toLocaleTimeString()}]${prefixPart} [${logLevelToString(
-                entry.level
-              )}] ${entry.message}${
-                entry.data ? ' ' + JSON.stringify(entry.data) : ''
-              }${entry.source ? ' (' + entry.source + ')' : ''}\n`;
-            })();
-      },
-      formatJson: entry =>
-        JSON.stringify({
-          timestamp: entry.timestamp,
-          level: logLevelToString(entry.level),
-          message: entry.message,
-          data: entry.data,
-          prefix: entry.prefix,
-          source: entry.source,
-        }) + '\n',
-      formatText: (entry, config) =>
-        `[${entry.timestamp.toLocaleTimeString()}]${
-          entry.prefix ? ' [' + entry.prefix + ']' : ''
-        } [${logLevelToString(entry.level)}] ${entry.message}${
-          entry.data ? ' ' + JSON.stringify(entry.data) : ''
-        }${entry.source ? ' (' + entry.source + ')' : ''}\n`,
-      formatTable: (entry, data, config, options) => {
-        // Simple table formatter
-        const headers = options.headers || Object.keys(data[0] || {});
-        const border = options.border !== false;
-        const rows = [headers.join(' | ')];
-        if (border) rows.push(headers.map(() => '---').join(' | '));
-        for (const row of data) {
-          rows.push(
-            headers
-              .map(h => {
-                const value = row[h] ?? '';
-                if (typeof value === 'object' && value !== null) {
-                  return JSON.stringify(value);
-                }
-                return typeof value === 'object' && value !== null
-                  ? JSON.stringify(value)
-                  : String(value as unknown);
-              })
-              .join(' | ')
-          );
-        }
-        return rows.map(r => r + '\n');
-      },
-    };
+    // Use provided formatter or fallback to ColoredTextFormatter
+    this.formatter = formatter || new ColoredTextFormatter();
 
     this.implementation =
       implementation || new ConsoleLogImplementation(this.config.output);
@@ -525,7 +468,7 @@ export class Logger implements ILogger {
         finalOptions
       );
       for (const output of outputs) {
-        this.implementation.write(output);
+        this.implementation.write(output + '\n');
       }
     }
   }
