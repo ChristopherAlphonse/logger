@@ -5,7 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0] - 2025-01-27
+## [1.1.1-canary.4] - 2025-07-29
+
+### Changed
+
+- **Source Information Display**: Replaced timestamps with filename and line number for better debugging. Logger now shows `[filename:lineNumber]` format by default, making it easier to trace log origins.
+- **Code Quality Improvements**: Removed unused code, fixed cognitive complexity issues, and improved overall code maintainability with better separation of concerns.
+- **Enhanced Formatting**: Added context and a new api
+
+## [1.1.0] - 2025-07-27
 
 ### Added
 
