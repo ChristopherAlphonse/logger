@@ -1,12 +1,53 @@
-/**
- * Log levels supported by the logger
- */
 export enum LogLevel {
   ERROR = 0,
   WARN = 1,
   INFO = 2,
   DEBUG = 3,
   TRACE = 4,
+  Log = 5,
+}
+
+/**
+ * String-based log levels for easier configuration
+ */
+export type LogLevelString =
+  | 'error'
+  | 'warn'
+  | 'info'
+  | 'debug'
+  | 'trace'
+  | 'silent'
+  | 'log';
+
+/**
+ * Convert string log level to enum
+ */
+export function stringToLogLevel(level: LogLevelString): LogLevel {
+  const levelMap: Record<LogLevelString, LogLevel> = {
+    error: LogLevel.ERROR,
+    warn: LogLevel.WARN,
+    info: LogLevel.INFO,
+    debug: LogLevel.DEBUG,
+    trace: LogLevel.TRACE,
+    silent: LogLevel.ERROR + 1,
+    log: LogLevel.LOG,
+  };
+  return levelMap[level];
+}
+
+/**
+ * Convert enum log level to string
+ */
+export function logLevelToString(level: LogLevel): LogLevelString {
+  const stringMap: Record<LogLevel, LogLevelString> = {
+    [LogLevel.ERROR]: 'error',
+    [LogLevel.WARN]: 'warn',
+    [LogLevel.INFO]: 'info',
+    [LogLevel.DEBUG]: 'debug',
+    [LogLevel.TRACE]: 'trace',
+    [LogLevel.LOG]: 'log',
+  };
+  return stringMap[level] ?? 'info';
 }
 
 /**
@@ -43,6 +84,8 @@ export interface LoggerConfig {
   json?: boolean;
   /** Custom output stream */
   output?: NodeJS.WritableStream;
+  /** Custom log handler */
+  handler?: LogHandler | null;
 }
 
 /**
@@ -58,7 +101,7 @@ export interface LogEntry {
 }
 
 /**
- * Logger interface
+ * Logger interface - Bridge Pattern Abstraction
  */
 export interface ILogger {
   error(message: string, data?: LogData): void;
@@ -69,14 +112,18 @@ export interface ILogger {
   log(level: LogLevel, message: string, data?: LogData): void;
   table(
     dataOrLevel: LogLevel | Record<string, unknown>[] | Record<string, unknown>,
-    dataOrOptions?: Record<string, unknown>[] | { headers?: string[]; border?: boolean },
+    dataOrOptions?:
+      | Record<string, unknown>[]
+      | { headers?: string[]; border?: boolean },
     options?: { headers?: string[]; border?: boolean }
   ): void;
-  setLevel(level: LogLevel): void;
+  setLevel(level: LogLevel | LogLevelString): void;
   setConfig(config: Partial<LoggerConfig>): void;
   getConfig(): LoggerConfig;
   isEnabled(level: LogLevel): boolean;
   child(prefix: string): ILogger;
+  setHandler(handler: LogHandler | null): void;
+  getHandler(): LogHandler | null;
 }
 
 /**
@@ -96,10 +143,81 @@ export interface ChalkInstance {
   cyan: ChalkColor;
   gray: ChalkColor;
   white: ChalkColor;
-  black: ChalkColor;
   bold: ChalkColor;
   italic: ChalkColor;
   underline: ChalkColor;
   inverse: ChalkColor;
   strikethrough: ChalkColor;
+}
+
+/**
+ * Log callback parameters for custom handlers
+ */
+export interface LogCallbackParams {
+  level: LogLevelString;
+  message: string;
+  data?: LogData;
+  timestamp: Date;
+  source?: string;
+  prefix?: string;
+  loggerName?: string;
+}
+
+/**
+ * Custom log handler function type
+ */
+export type LogHandler = (params: LogCallbackParams) => void;
+
+/**
+ * Strategy Pattern - Formatter Strategy Interface
+ */
+export interface ILogFormatter {
+  formatLogEntry(entry: LogEntry, config: LoggerConfig): string;
+  formatJson(entry: LogEntry): string;
+  formatText(entry: LogEntry, config: LoggerConfig): string;
+  formatTable(
+    entry: LogEntry,
+    data: Record<string, unknown>[],
+    config: LoggerConfig,
+    options: { headers?: string[]; border?: boolean }
+  ): string[];
+}
+
+/**
+ * Bridge Pattern - Implementation Interface
+ */
+export interface ILogImplementation {
+  write(output: string): void;
+  getSourceInfo(): string;
+}
+
+/**
+ * Abstract Factory Pattern - Logger Factory Interface
+ */
+export interface ILoggerFactory {
+  createLogger(config?: Partial<LoggerConfig>): ILogger;
+
+  createMinimalLogger(config?: Partial<LoggerConfig>): ILogger;
+}
+
+/**
+ * Builder Pattern - Logger Builder Interface
+ */
+export interface ILoggerBuilder {
+  setLevel(level: LogLevel | LogLevelString): ILoggerBuilder;
+  setTimestamps(enabled: boolean): ILoggerBuilder;
+  setColors(enabled: boolean): ILoggerBuilder;
+  setTimestampFormat(format: string): ILoggerBuilder;
+  setShowSource(enabled: boolean): ILoggerBuilder;
+  setPrefix(prefix: string): ILoggerBuilder;
+  setJson(enabled: boolean): ILoggerBuilder;
+  setOutput(output: NodeJS.WritableStream): ILoggerBuilder;
+  setHandler(handler: LogHandler | null): ILoggerBuilder;
+  build(): ILogger;
+  reset(): ILoggerBuilder;
+  buildJsonLogger(): ILogger;
+  buildMinimalLogger(): ILogger;
+  buildVerboseLogger(): ILogger;
+  buildDevelopmentLogger(): ILogger;
+  buildProductionLogger(): ILogger;
 }

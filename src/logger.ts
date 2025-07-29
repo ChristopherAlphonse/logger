@@ -1,15 +1,23 @@
-import { LoggerFactory } from './factories';
-import { LogFormatter } from './formatters';
+import { ConsoleLogImplementation } from './implementations';
+import { loggerRegistry } from './registry';
 import {
+  type ILogFormatter,
+  type ILogImplementation,
   type ILogger,
+  type LogCallbackParams,
   type LogData,
   type LogEntry,
+  type LogHandler,
   LogLevel,
+  type LogLevelString,
   type LoggerConfig,
+  logLevelToString,
+  stringToLogLevel,
 } from './types';
 
 /**
- * A customizable logger class that wraps logger output with color support using chalk.
+ * Bridge Pattern - Logger Abstraction
+ * A customizable logger class that separates abstraction from implementation
  * Provides flexible logging with configurable levels, timestamps, source information,
  * and output formats (human-readable or JSON).
  *
@@ -22,7 +30,9 @@ import {
  */
 export class Logger implements ILogger {
   private config: LoggerConfig;
-  private formatter: LogFormatter;
+  private readonly implementation: ILogImplementation;
+  private readonly formatter: ILogFormatter;
+  private _handler: LogHandler | null = null;
 
   /**
    * Creates a new Logger instance with the specified configuration.
@@ -52,7 +62,11 @@ export class Logger implements ILogger {
    * });
    * ```
    */
-  constructor(config: LoggerConfig = {}) {
+  constructor(
+    config: LoggerConfig = {},
+    formatter?: ILogFormatter,
+    implementation?: ILogImplementation
+  ) {
     this.config = {
       level: LogLevel.INFO,
       timestamps: true,
@@ -64,7 +78,73 @@ export class Logger implements ILogger {
       output: process.stdout,
       ...config,
     };
-    this.formatter = new LogFormatter();
+
+    // Use provided formatter or fallback to a basic one
+    this.formatter = formatter || {
+      formatLogEntry: (entry, config) => {
+        return config.json
+          ? JSON.stringify({
+              timestamp: entry.timestamp,
+              level: logLevelToString(entry.level),
+              message: entry.message,
+              data: entry.data,
+              prefix: entry.prefix,
+              source: entry.source,
+            }) + '\n'
+          : (() => {
+              const prefixPart = entry.prefix ? ' [' + entry.prefix + ']' : '';
+              return `[${entry.timestamp.toLocaleTimeString()}]${prefixPart} [${logLevelToString(
+                entry.level
+              )}] ${entry.message}${
+                entry.data ? ' ' + JSON.stringify(entry.data) : ''
+              }${entry.source ? ' (' + entry.source + ')' : ''}\n`;
+            })();
+      },
+      formatJson: entry =>
+        JSON.stringify({
+          timestamp: entry.timestamp,
+          level: logLevelToString(entry.level),
+          message: entry.message,
+          data: entry.data,
+          prefix: entry.prefix,
+          source: entry.source,
+        }) + '\n',
+      formatText: (entry, config) =>
+        `[${entry.timestamp.toLocaleTimeString()}]${
+          entry.prefix ? ' [' + entry.prefix + ']' : ''
+        } [${logLevelToString(entry.level)}] ${entry.message}${
+          entry.data ? ' ' + JSON.stringify(entry.data) : ''
+        }${entry.source ? ' (' + entry.source + ')' : ''}\n`,
+      formatTable: (entry, data, config, options) => {
+        // Simple table formatter
+        const headers = options.headers || Object.keys(data[0] || {});
+        const border = options.border !== false;
+        const rows = [headers.join(' | ')];
+        if (border) rows.push(headers.map(() => '---').join(' | '));
+        for (const row of data) {
+          rows.push(
+            headers
+              .map(h => {
+                const value = row[h] ?? '';
+                if (typeof value === 'object' && value !== null) {
+                  return JSON.stringify(value);
+                }
+                return typeof value === 'object' && value !== null
+                  ? JSON.stringify(value)
+                  : String(value as unknown);
+              })
+              .join(' | ')
+          );
+        }
+        return rows.map(r => r + '\n');
+      },
+    };
+
+    this.implementation =
+      implementation || new ConsoleLogImplementation(this.config.output);
+
+    // Register with global registry
+    loggerRegistry.register(this);
   }
 
   /**
@@ -166,11 +246,32 @@ export class Logger implements ILogger {
     };
 
     if (this.config.showSource) {
-      entry.source = this.getSourceInfo();
+      entry.source = this.implementation.getSourceInfo();
     }
 
-    const output = this.formatter.formatLogEntry(entry, this.config);
-    this.write(output);
+    // Call custom handler if set
+    const handler = this.getHandler();
+    if (handler) {
+      const callbackParams: LogCallbackParams = {
+        level: logLevelToString(level),
+        message: entry.message,
+        data: entry.data,
+        timestamp: entry.timestamp,
+        source: entry.source,
+        prefix: entry.prefix,
+        loggerName: this.config.prefix || 'default',
+      };
+      handler(callbackParams);
+    }
+
+    // Format output using formatter
+    let output: string;
+    if (this.config.json) {
+      output = this.formatter.formatJson(entry);
+    } else {
+      output = this.formatter.formatText(entry, this.config);
+    }
+    this.implementation.write(output);
   }
 
   /**
@@ -195,8 +296,12 @@ export class Logger implements ILogger {
    * logger.debug('Now this is visible');
    * ```
    */
-  setLevel(level: LogLevel): void {
-    this.config.level = level;
+  setLevel(level: LogLevel | LogLevelString): void {
+    if (typeof level === 'string') {
+      this.config.level = stringToLogLevel(level);
+    } else {
+      this.config.level = level;
+    }
   }
 
   /**
@@ -321,7 +426,15 @@ export class Logger implements ILogger {
    */
   child(prefix: string): Logger {
     const childConfig = { ...this.config, prefix };
-    return new Logger(childConfig);
+    return new Logger(childConfig, this.formatter, this.implementation);
+  }
+
+  setHandler(handler: LogHandler | null): void {
+    this._handler = handler;
+  }
+
+  getHandler(): LogHandler | null {
+    return this._handler;
   }
 
   /**
@@ -398,12 +511,12 @@ export class Logger implements ILogger {
     };
 
     if (this.config.showSource) {
-      entry.source = this.getSourceInfo();
+      entry.source = this.implementation.getSourceInfo();
     }
 
     if (this.config.json) {
       const output = this.formatter.formatJson(entry);
-      this.write(output);
+      this.implementation.write(output);
     } else {
       const outputs = this.formatter.formatTable(
         entry,
@@ -412,72 +525,8 @@ export class Logger implements ILogger {
         finalOptions
       );
       for (const output of outputs) {
-        this.write(output);
+        this.implementation.write(output);
       }
     }
-  }
-
-  /**
-   * Write output to the configured stream
-   */
-  private write(output: string): void {
-    const stream = this.config.output || process.stdout;
-    stream.write(output);
-  }
-
-  /**
-   * Get source file information for the calling function
-   */
-  private getSourceInfo(): string {
-    const stack = new Error().stack;
-    if (!stack) return 'unknown';
-
-    const lines = stack.split('\n');
-    for (let i = 3; i < lines.length; i++) {
-      const line = lines[i];
-      if (line.includes('node_modules') || line.includes('packages/logger')) {
-        continue;
-      }
-
-      const match = line.match(/at\s+(.+?)\s+\((.+):(\d+):(\d+)\)/);
-      if (match) {
-        const [, _functionName, filePath, lineNum] = match;
-        const fileName =
-          filePath.split('/').pop()?.split('\\').pop() || 'unknown';
-        return `${fileName}:${lineNum}`;
-      }
-    }
-
-    return 'unknown';
-  }
-
-  // Static factory methods for backward compatibility
-  /**
-   * Creates a logger configured for JSON output, ideal for production environments
-   * and log aggregation systems.
-   *
-   * @deprecated Use LoggerFactory.createJsonLogger() instead
-   */
-  static createJsonLogger(config: Partial<LoggerConfig> = {}): Logger {
-    return LoggerFactory.createJsonLogger(config);
-  }
-
-  /**
-   * Creates a logger with minimal output formatting, ideal for simple logger output
-   * or when you want clean, uncluttered logs.
-   *
-   * @deprecated Use LoggerFactory.createMinimalLogger() instead
-   */
-  static createMinimalLogger(config: Partial<LoggerConfig> = {}): Logger {
-    return LoggerFactory.createMinimalLogger(config);
-  }
-
-  /**
-   * Creates a logger with verbose output formatting, ideal for development and debugging.
-   *
-   * @deprecated Use LoggerFactory.createVerboseLogger() instead
-   */
-  static createVerboseLogger(config: Partial<LoggerConfig> = {}): Logger {
-    return LoggerFactory.createVerboseLogger(config);
   }
 }

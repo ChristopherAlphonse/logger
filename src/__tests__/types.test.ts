@@ -155,6 +155,8 @@ describe('Types', () => {
         getConfig: jest.fn(),
         isEnabled: jest.fn(),
         child: jest.fn(),
+        setHandler: jest.fn(),
+        getHandler: jest.fn(),
       };
 
       expect(typeof logger.error).toBe('function');

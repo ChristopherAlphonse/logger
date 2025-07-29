@@ -134,11 +134,6 @@ const customLogger = new Logger({
 
 ```typescript
 import { Logger } from '@calphonse/logger';
-
-// Pre-configured loggers for common use cases
-const jsonLogger = Logger.createJsonLogger();
-const minimalLogger = Logger.createMinimalLogger();
-const verboseLogger = Logger.createVerboseLogger();
 ```
 
 ## API Reference
@@ -161,33 +156,6 @@ logger.isEnabled(level: LogLevel): boolean
 
 // Child loggers
 logger.child(prefix: string): Logger
-```
-
-### Log Levels
-
-```typescript
-enum LogLevel {
-  ERROR = 0, // Only errors
-  WARN = 1, // Warnings and errors
-  INFO = 2, // Info, warnings, and errors (default)
-  DEBUG = 3, // Debug, info, warnings, and errors
-  TRACE = 4, // Everything
-}
-```
-
-### Configuration Options
-
-```typescript
-interface LoggerConfig {
-  level?: LogLevel; // Minimum log level
-  timestamps?: boolean; // Include timestamps
-  colors?: boolean; // Enable colored output
-  timestampFormat?: string; // Timestamp format
-  showSource?: boolean; // Show file/line info
-  prefix?: string; // Custom prefix
-  json?: boolean; // JSON output format
-  output?: NodeJS.WritableStream; // Custom output stream
-}
 ```
 
 ## Use Cases
