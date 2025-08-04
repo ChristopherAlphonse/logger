@@ -1,32 +1,19 @@
 export { Logger } from './logger';
-export { EnhancedLogger } from './enhanced-logger';
 export { LogLevel } from './types';
-export type {
-  LoggerConfig,
-  LogEntry,
-  ILogger,
-  LogData,
-  AIInsight,
-  ErrorAnalysis,
-} from './types';
+export type { LoggerConfig, LogEntry, ILogger, LogData } from './types';
 export { LoggerFactory } from './factories';
 export { LogFormatter } from './formatters';
-export { ConfigManager } from './config-manager';
-export { EnhancedAIService } from './enhanced-ai-service';
-export { AIEngine } from './ai-engine';
 
 import { LoggerFactory } from './factories';
 import { Logger } from './logger';
-import { EnhancedLogger } from './enhanced-logger';
 import { LogLevel } from './types';
 import type { LogData, LoggerConfig } from './types';
 
 /**
- * Default enhanced logger instance with INFO level and AI-powered error analysis.
+ * Default logger instance with INFO level and sensible defaults.
  *
  * This is a pre-configured logger instance that you can use immediately
- * without any setup. It includes timestamps, colors, INFO level logging,
- * and FREE AI-powered error analysis (when Ollama is available).
+ * without any setup. It includes timestamps, colors, and INFO level logging.
  *
  * @example
  * ```typescript
@@ -36,7 +23,6 @@ import type { LogData, LoggerConfig } from './types';
  *
  * logger.info('Application started');
  *
- * // AI will automatically analyze this error!
  * try {
  *   // some code that might fail
  * } catch (error) {
@@ -44,7 +30,7 @@ import type { LogData, LoggerConfig } from './types';
  * }
  * ```
  */
-const defaultLogger = new EnhancedLogger();
+const defaultLogger = new Logger();
 
 /**
  * Convenience functions for quick logging using the default logger instance.
@@ -141,8 +127,7 @@ const log = {
  * }
  * ```
  */
-const createLogger = (config?: Partial<LoggerConfig>, enhanced = true) =>
-  enhanced ? new EnhancedLogger(config) : new Logger(config);
+const createLogger = (config?: Partial<LoggerConfig>) => new Logger(config);
 
 /**
  * Create a child logger with a prefix using the default logger instance.
