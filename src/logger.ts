@@ -7,7 +7,11 @@ import {
   LogLevel,
   type LoggerConfig,
 } from './types';
-import { processConsoleArgsWithFormatting } from './console-utils';
+import type { AIInsight, ErrorAnalysis } from './types';
+import { AIService } from './ai-service';
+import { ConfigManager } from './config-manager';
+import { processConsoleArgs } from './console-utils';
+import { createInternalLogger } from './internalLogger';
 
 /**
  * A customizable logger class that wraps console output with color support using chalk.
@@ -24,6 +28,8 @@ import { processConsoleArgsWithFormatting } from './console-utils';
 export class Logger implements ILogger {
   private config: LoggerConfig;
   private formatter: LogFormatter;
+  private aiService: AIService | null = null;
+  private configManager: ConfigManager;
 
   /**
    * Creates a new Logger instance with the specified configuration.
@@ -65,7 +71,15 @@ export class Logger implements ILogger {
       output: process.stdout,
       ...config,
     };
+
+    // Validate output stream for security
+    if (this.config.output && !this.isValidOutputStream(this.config.output)) {
+      this.config.output = process.stdout;
+    }
+
     this.formatter = new LogFormatter();
+    this.configManager = ConfigManager.getInstance();
+    this.initializeAI();
   }
 
   /**
@@ -81,6 +95,7 @@ export class Logger implements ILogger {
    */
   error(message: string, data?: LogData): void {
     this.log(LogLevel.ERROR, message, data);
+    this.analyzeWithAI(LogLevel.ERROR, message, data);
   }
 
   /**
@@ -96,6 +111,7 @@ export class Logger implements ILogger {
    */
   warn(message: string, data?: LogData): void {
     this.log(LogLevel.WARN, message, data);
+    this.analyzeWithAI(LogLevel.WARN, message, data);
   }
 
   /**
@@ -195,7 +211,7 @@ export class Logger implements ILogger {
    * ```
    */
   logConsole(...args: any[]): void {
-    const { message, data } = processConsoleArgsWithFormatting(args);
+    const { message, data } = processConsoleArgs(args);
     this.info(message, data);
   }
 
@@ -205,7 +221,7 @@ export class Logger implements ILogger {
    * @param args - Any number of arguments, processed like console.warn
    */
   warnConsole(...args: any[]): void {
-    const { message, data } = processConsoleArgsWithFormatting(args);
+    const { message, data } = processConsoleArgs(args);
     this.warn(message, data);
   }
 
@@ -215,7 +231,7 @@ export class Logger implements ILogger {
    * @param args - Any number of arguments, processed like console.error
    */
   errorConsole(...args: any[]): void {
-    const { message, data } = processConsoleArgsWithFormatting(args);
+    const { message, data } = processConsoleArgs(args);
     this.error(message, data);
   }
 
@@ -225,7 +241,7 @@ export class Logger implements ILogger {
    * @param args - Any number of arguments, processed like console.info
    */
   infoConsole(...args: any[]): void {
-    const { message, data } = processConsoleArgsWithFormatting(args);
+    const { message, data } = processConsoleArgs(args);
     this.info(message, data);
   }
 
@@ -235,7 +251,7 @@ export class Logger implements ILogger {
    * @param args - Any number of arguments, processed like console.debug
    */
   debugConsole(...args: any[]): void {
-    const { message, data } = processConsoleArgsWithFormatting(args);
+    const { message, data } = processConsoleArgs(args);
     this.debug(message, data);
   }
 
@@ -506,33 +522,181 @@ export class Logger implements ILogger {
     return 'unknown';
   }
 
-  // Static factory methods for backward compatibility
+  // Static factory methods removed - use LoggerFactory instead
+
   /**
-   * Creates a logger configured for JSON output, ideal for production environments
-   * and log aggregation systems.
-   *
-   * @deprecated Use LoggerFactory.createJsonLogger() instead
+   * Initialize AI service based on configuration
    */
-  static createJsonLogger(config: Partial<LoggerConfig> = {}): Logger {
-    return LoggerFactory.createJsonLogger(config);
+  private initializeAI(): void {
+    try {
+      const aiConfig = this.configManager.getAIConfig();
+      if (aiConfig.enabled) {
+        this.aiService = new AIService();
+      }
+    } catch (error) {
+      // AI initialization fails gracefully - logging still works without AI
+      const internalLogger = createInternalLogger('[LOGGER]');
+      internalLogger.warn('AI service initialization failed', { error });
+    }
   }
 
   /**
-   * Creates a logger with minimal output formatting, ideal for simple console output
-   * or when you want clean, uncluttered logs.
-   *
-   * @deprecated Use LoggerFactory.createMinimalLogger() instead
+   * Analyze message and data with AI
    */
-  static createMinimalLogger(config: Partial<LoggerConfig> = {}): Logger {
-    return LoggerFactory.createMinimalLogger(config);
+  private async analyzeWithAI(
+    level: LogLevel,
+    message: string,
+    data?: LogData
+  ): Promise<void> {
+    if (!this.aiService || !this.shouldAnalyzeWithAI(level, data)) {
+      return;
+    }
+
+    try {
+      const error = data instanceof Error ? data : (data as any)?.error;
+      if (error instanceof Error) {
+        const insight = await this.aiService.analyzeError(error, {
+          message,
+          data,
+        });
+        this.displayAIInsight(insight);
+      }
+    } catch (analysisError) {
+      const internalLogger = createInternalLogger('[LOGGER]');
+      internalLogger.warn('AI error analysis failed', { analysisError });
+    }
   }
 
   /**
-   * Creates a logger with verbose output formatting, ideal for development and debugging.
-   *
-   * @deprecated Use LoggerFactory.createVerboseLogger() instead
+   * Determine if AI analysis should be performed
    */
-  static createVerboseLogger(config: Partial<LoggerConfig> = {}): Logger {
-    return LoggerFactory.createVerboseLogger(config);
+  private shouldAnalyzeWithAI(level: LogLevel, data?: LogData): boolean {
+    if (level !== LogLevel.ERROR && level !== LogLevel.WARN) return false;
+
+    // Analyze if data contains an Error object
+    if (data instanceof Error) return true;
+    if (data && typeof data === 'object' && 'error' in data) return true;
+
+    return false;
+  }
+
+  /**
+   * Display AI insight in a formatted way
+   */
+  private displayAIInsight(insight: AIInsight): void {
+    const output = this.config.output?.write || process.stdout.write;
+
+    if (this.config.colors) {
+      output('\nAI Insight:\n');
+      output(`   Explanation: ${insight.explanation}\n`);
+      output(`   Likely Causes: ${insight.likelyCauses.join(', ')}\n`);
+      output(`   Suggested Fix: ${insight.suggestedFix}\n`);
+      if (insight.contextualInsights.length > 0) {
+        output(`   Context: ${insight.contextualInsights.join(', ')}\n`);
+      }
+    } else {
+      output('\nAI Insight:\n');
+      output(`   Explanation: ${insight.explanation}\n`);
+      output(`   Likely Causes: ${insight.likelyCauses.join(', ')}\n`);
+      output(`   Suggested Fix: ${insight.suggestedFix}\n`);
+      if (insight.contextualInsights.length > 0) {
+        output(`   Context: ${insight.contextualInsights.join(', ')}\n`);
+      }
+    }
+  }
+
+  // AI-specific methods
+  async analyzeError(error: Error): Promise<ErrorAnalysis> {
+    if (!this.aiService) {
+      throw new Error('AI service not initialized');
+    }
+    const insight = await this.aiService.analyzeError(error);
+    return {
+      error,
+      stackTrace: [],
+      errorType: error.name,
+      errorHash: '',
+      insight,
+    };
+  }
+
+  async getInsight(error: Error): Promise<AIInsight | null> {
+    if (!this.aiService) return null;
+    return await this.aiService.analyzeError(error);
+  }
+
+  enableAI(): void {
+    if (!this.aiService) {
+      this.aiService = new AIService();
+    }
+  }
+
+  disableAI(): void {
+    this.aiService = null;
+  }
+
+  async isAIHealthy(): Promise<boolean> {
+    if (!this.aiService) return false;
+    return await this.aiService.isHealthy();
+  }
+
+  async testAI(): Promise<{ success: boolean; message: string }> {
+    if (!this.aiService) {
+      return { success: false, message: 'AI service not initialized' };
+    }
+    const isHealthy = await this.aiService.isHealthy();
+    return {
+      success: isHealthy,
+      message: isHealthy
+        ? 'AI service is working'
+        : 'AI service health check failed',
+    };
+  }
+
+  getAIStats(): Record<string, unknown> | null {
+    if (!this.aiService) return null;
+    return this.aiService.getStats();
+  }
+
+  async switchAIProvider(
+    provider: 'ollama' | 'openai' | 'claude' | 'disabled'
+  ): Promise<void> {
+    // Update the config manager with the new provider
+    this.configManager.updateConfig({
+      ai: {
+        ...this.configManager.getAIConfig(),
+        provider: provider as any,
+      },
+    });
+
+    // Reinitialize AI service with new config
+    this.aiService = new AIService();
+  }
+
+  /**
+   * Validate output stream for security
+   */
+  private isValidOutputStream(stream: NodeJS.WritableStream): boolean {
+    if (!stream || typeof stream !== 'object') return false;
+
+    // Check if it has the necessary methods
+    if (typeof stream.write !== 'function') return false;
+
+    // Allow standard streams
+    if (stream === process.stdout || stream === process.stderr) return true;
+
+    // Allow file streams and other writable streams with proper constructor
+    if (stream.constructor && stream.constructor.name) {
+      const validConstructors = [
+        'WriteStream',
+        'Socket',
+        'PassThrough',
+        'Transform',
+        'Object', // Allow test mocks
+      ];
+      return validConstructors.includes(stream.constructor.name);
+    }
+
+    return false;
   }
 }
