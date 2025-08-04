@@ -2,20 +2,11 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import type { AIConfig } from './types';
-import { Logger } from './logger';
 
-// Create a logger instance for internal use
-const internalLogger = new Logger({
-  level: 1, // WARN level
-  timestamps: false,
-  colors: true,
-  showSource: true, // Show file:line for debugging config issues
-  prefix: '[CONFIG]',
-});
+import { createInternalLogger } from './internalLogger';
 
-/**
- * Extended AI configuration with multiple provider support
- */
+const internalLogger = createInternalLogger('[CONFIG]');
+
 export interface ExtendedAIConfig extends Omit<AIConfig, 'provider'> {
   /** AI provider to use */
   provider: 'ollama' | 'openai' | 'claude' | 'disabled';
@@ -43,9 +34,6 @@ export interface ExtendedAIConfig extends Omit<AIConfig, 'provider'> {
   };
 }
 
-/**
- * Logger configuration with enhanced AI support
- */
 export interface LoggerAIConfig {
   ai: ExtendedAIConfig;
   cache?: {
@@ -57,50 +45,44 @@ export interface LoggerAIConfig {
   };
 }
 
-/**
- * Default configuration for free local development
- */
 const DEFAULT_CONFIG: LoggerAIConfig = {
   ai: {
     enabled: true,
-    provider: 'ollama', // Free by default!
+    provider: 'ollama', // Default to free local Ollama
+    apiKey: '',
     caching: true,
-    confidenceThreshold: 1, // MEDIUM
-    maxInsightLength: 1000,
-    timeout: 30000,
+    confidenceThreshold: 1, // MEDIUM confidence
+    maxInsightLength: 500,
+    timeout: 10000,
     ollama: {
       baseUrl: 'http://localhost:11434',
-      model: 'llama3.2:3b', // Lightweight model for fast responses
-      temperature: 0.1,
+      model: 'llama3.2:3b',
+      temperature: 0.7,
       maxTokens: 1000,
     },
-    prompts: {
-      errorAnalysis: `You are an expert JavaScript/TypeScript debugger. Analyze this error and provide helpful insights in JSON format:
-{
-  "summary": "Brief explanation of what went wrong",
-  "likelyCauses": ["cause1", "cause2", "cause3"],
-  "suggestedFix": "Specific actionable fix",
-  "contextualInsights": ["insight1", "insight2"],
-  "confidence": "LOW" | "MEDIUM" | "HIGH" | "VERY_HIGH"
-}`,
+    openai: {
+      model: 'gpt-3.5-turbo',
+      temperature: 0.7,
+      maxTokens: 1000,
+    },
+    claude: {
+      model: 'claude-3-haiku-20240307',
+      temperature: 0.7,
+      maxTokens: 1000,
     },
     rateLimit: {
-      maxRequestsPerMinute: 60, // No limits for local models
+      maxRequestsPerMinute: 60,
       maxRequestsPerHour: 1000,
     },
   },
   cache: {
     enabled: true,
-    maxSize: 5000,
-    ttl: 24 * 60 * 60 * 1000, // 24 hours
-    persistToDisk: true,
-    cacheDir: join(process.cwd(), '.logger-ai-cache'),
+    maxSize: 1000,
+    ttl: 60 * 60 * 1000, // 1 hour
+    persistToDisk: false,
   },
 };
 
-/**
- * Configuration manager for AI logger
- */
 export class ConfigManager {
   private static instance: ConfigManager;
   private config: LoggerAIConfig;
@@ -111,9 +93,6 @@ export class ConfigManager {
     this.config = this.loadConfig();
   }
 
-  /**
-   * Get singleton instance
-   */
   static getInstance(): ConfigManager {
     if (!ConfigManager.instance) {
       ConfigManager.instance = new ConfigManager();
@@ -121,31 +100,38 @@ export class ConfigManager {
     return ConfigManager.instance;
   }
 
-  /**
-   * Get the configuration file path
-   */
   private getConfigPath(): string {
-    // Check for local config first (project-specific)
-    const localConfigPath = join(process.cwd(), '.logger-ai.config.json');
-    if (existsSync(localConfigPath)) {
-      return localConfigPath;
-    }
+    // Try local config first, then global
+    const localConfig = join(process.cwd(), '.logger-ai.config.json');
+    const globalConfig = join(homedir(), '.logger-ai.config.json');
 
-    // Fall back to global config in home directory
-    const globalConfigPath = join(homedir(), '.logger-ai.config.json');
-    return globalConfigPath;
+    return existsSync(localConfig) ? localConfig : globalConfig;
   }
 
-  /**
-   * Load configuration from file or create default
-   */
   private loadConfig(): LoggerAIConfig {
     try {
       if (existsSync(this.configPath)) {
         const fileContent = readFileSync(this.configPath, 'utf-8');
+
+        // Validate file size (prevent DoS)
+        if (fileContent.length > 100000) {
+          // 100KB limit
+          internalLogger.warn('Config file too large, using defaults', {
+            configPath: this.configPath,
+          });
+          return DEFAULT_CONFIG;
+        }
+
         const userConfig = JSON.parse(fileContent);
 
-        // Merge with defaults
+        // Validate config structure
+        if (!this.isValidConfig(userConfig)) {
+          internalLogger.warn('Invalid config structure, using defaults', {
+            configPath: this.configPath,
+          });
+          return DEFAULT_CONFIG;
+        }
+
         return this.mergeConfigs(DEFAULT_CONFIG, userConfig);
       }
     } catch (error) {
@@ -154,87 +140,53 @@ export class ConfigManager {
         { error, configPath: this.configPath }
       );
     }
-
-    // Return default config
     return DEFAULT_CONFIG;
   }
 
-  /**
-   * Deep merge configurations
-   */
   private mergeConfigs(
     defaultConfig: LoggerAIConfig,
     userConfig: Partial<LoggerAIConfig>
   ): LoggerAIConfig {
     const merged = { ...defaultConfig };
 
+    // Merge AI config
     if (userConfig.ai) {
-      merged.ai = { ...defaultConfig.ai, ...userConfig.ai };
-
-      // Merge provider-specific configs
-      if (userConfig.ai.ollama) {
-        merged.ai.ollama = {
-          ...defaultConfig.ai.ollama,
-          ...userConfig.ai.ollama,
-        };
-      }
-      if (userConfig.ai.openai) {
-        merged.ai.openai = {
-          ...defaultConfig.ai.openai,
-          ...userConfig.ai.openai,
-        };
-      }
-      if (userConfig.ai.claude) {
-        merged.ai.claude = {
-          ...defaultConfig.ai.claude,
-          ...userConfig.ai.claude,
-        };
-      }
-      if (userConfig.ai.prompts) {
-        merged.ai.prompts = {
-          ...defaultConfig.ai.prompts,
-          ...userConfig.ai.prompts,
-        };
-      }
-      if (userConfig.ai.rateLimit) {
-        merged.ai.rateLimit = {
-          ...defaultConfig.ai.rateLimit,
+      merged.ai = {
+        ...merged.ai,
+        ...userConfig.ai,
+        // Deep merge provider-specific configs
+        ollama: { ...merged.ai.ollama, ...userConfig.ai.ollama },
+        openai: { ...merged.ai.openai, ...userConfig.ai.openai },
+        claude: { ...merged.ai.claude, ...userConfig.ai.claude },
+        rateLimit: {
+          maxRequestsPerMinute: 60,
+          maxRequestsPerHour: 1000,
+          ...merged.ai.rateLimit,
           ...userConfig.ai.rateLimit,
-        };
-      }
+        },
+      };
     }
 
+    // Merge cache config
     if (userConfig.cache) {
-      merged.cache = { ...defaultConfig.cache, ...userConfig.cache };
+      merged.cache = { ...merged.cache, ...userConfig.cache };
     }
 
     return merged;
   }
 
-  /**
-   * Get current configuration
-   */
   getConfig(): LoggerAIConfig {
-    return this.config;
+    return { ...this.config };
   }
 
-  /**
-   * Get AI configuration
-   */
   getAIConfig(): ExtendedAIConfig {
-    return this.config.ai;
+    return { ...this.config.ai };
   }
 
-  /**
-   * Update configuration
-   */
   updateConfig(updates: Partial<LoggerAIConfig>): void {
     this.config = this.mergeConfigs(this.config, updates);
   }
 
-  /**
-   * Save configuration to file
-   */
   saveConfig(): void {
     try {
       const configData = JSON.stringify(this.config, null, 2);
@@ -247,64 +199,44 @@ export class ConfigManager {
     }
   }
 
-  /**
-   * Create a sample configuration file for users
-   */
   static createSampleConfig(filePath?: string): void {
-    const sampleConfig: LoggerAIConfig = {
+    const sampleConfig = {
       ai: {
         enabled: true,
-        provider: 'ollama', // Free local AI by default
+        provider: 'ollama',
+        apiKey: '',
         caching: true,
-        confidenceThreshold: 1, // MEDIUM
-        maxInsightLength: 1000,
-        timeout: 30000,
-
-        // Ollama configuration (FREE - no API key needed)
+        confidenceThreshold: 1,
+        maxInsightLength: 500,
+        timeout: 10000,
         ollama: {
           baseUrl: 'http://localhost:11434',
-          model: 'llama3.2:3b', // Fast, lightweight model
-          temperature: 0.1,
+          model: 'llama3.2:3b',
+          temperature: 0.7,
           maxTokens: 1000,
         },
-
-        // OpenAI configuration (PAID - requires API key)
         openai: {
           apiKey: 'your-openai-api-key-here',
-          model: 'gpt-4',
-          temperature: 0.1,
+          model: 'gpt-3.5-turbo',
+          temperature: 0.7,
           maxTokens: 1000,
-          organization: 'your-org-id', // Optional
         },
-
-        // Claude configuration (PAID - requires API key)
         claude: {
           apiKey: 'your-claude-api-key-here',
-          model: 'claude-3-sonnet-20240229',
-          temperature: 0.1,
+          model: 'claude-3-haiku-20240307',
+          temperature: 0.7,
           maxTokens: 1000,
         },
-
-        // Custom prompts (optional)
-        prompts: {
-          errorAnalysis: 'Custom error analysis prompt...',
-          stackTraceAnalysis: 'Custom stack trace analysis prompt...',
-        },
-
-        // Rate limiting
         rateLimit: {
           maxRequestsPerMinute: 60,
           maxRequestsPerHour: 1000,
         },
       },
-
-      // Cache configuration
       cache: {
         enabled: true,
-        maxSize: 5000,
-        ttl: 24 * 60 * 60 * 1000, // 24 hours
-        persistToDisk: true,
-        cacheDir: './.logger-ai-cache',
+        maxSize: 1000,
+        ttl: 60 * 60 * 1000,
+        persistToDisk: false,
       },
     };
 
@@ -330,75 +262,118 @@ export class ConfigManager {
     }
   }
 
-  /**
-   * Check if a provider is properly configured
-   */
   isProviderConfigured(provider: string): boolean {
-    const { ai } = this.config;
-
+    const config = this.getAIConfig();
     switch (provider) {
       case 'ollama':
-        return ai.ollama?.baseUrl ? true : false;
+        return true; // Ollama is always available locally
       case 'openai':
-        return ai.openai?.apiKey ? true : false;
+        return !!config.openai?.apiKey;
       case 'claude':
-        return ai.claude?.apiKey ? true : false;
-      case 'disabled':
-        return true;
+        return !!config.claude?.apiKey;
       default:
         return false;
     }
   }
 
-  /**
-   * Get provider-specific configuration
-   */
-  getProviderConfig(provider: string): any {
-    const { ai } = this.config;
-
+  getProviderConfig(provider: string): Record<string, unknown> | null {
+    const config = this.getAIConfig();
     switch (provider) {
       case 'ollama':
-        return ai.ollama;
+        return config.ollama || null;
       case 'openai':
-        return ai.openai;
+        return config.openai || null;
       case 'claude':
-        return ai.claude;
+        return config.claude || null;
       default:
         return null;
     }
   }
 
-  /**
-   * Auto-detect best available provider
-   */
   detectBestProvider(): string {
-    const { ai } = this.config;
+    const config = this.getAIConfig();
 
-    // Prefer free local models
-    if (this.isProviderConfigured('ollama')) {
-      return 'ollama';
-    }
+    // Check in order of preference
+    if (config.provider === 'ollama') return 'ollama';
+    if (this.isProviderConfigured('openai')) return 'openai';
+    if (this.isProviderConfigured('claude')) return 'claude';
 
-    // Fall back to cloud providers if configured
-    if (this.isProviderConfigured('openai')) {
-      return 'openai';
-    }
+    return 'disabled';
+  }
 
-    if (this.isProviderConfigured('claude')) {
-      return 'claude';
-    }
-
-    // Default to ollama even if not configured (will show helpful error)
-    return 'ollama';
+  isAIAvailable(): boolean {
+    const provider = this.detectBestProvider();
+    return provider !== 'disabled';
   }
 
   /**
-   * Check if AI features are available
+   * Validate configuration object structure and values
    */
-  isAIAvailable(): boolean {
-    return (
-      this.config.ai.enabled &&
-      this.isProviderConfigured(this.config.ai.provider)
-    );
+  private isValidConfig(config: unknown): boolean {
+    if (!config || typeof config !== 'object' || config === null) return false;
+
+    const configObj = config as Record<string, unknown>;
+
+    // Check for dangerous properties
+    const dangerousKeys = ['__proto__', 'constructor', 'prototype'];
+    if (this.hasDangerousKeys(configObj, dangerousKeys)) return false;
+
+    // Validate AI config if present
+    if (
+      configObj.ai &&
+      typeof configObj.ai === 'object' &&
+      configObj.ai !== null
+    ) {
+      const aiConfig = configObj.ai as Record<string, unknown>;
+      const { provider } = aiConfig;
+      const validProviders = ['ollama', 'openai', 'claude', 'disabled'];
+      if (provider && !validProviders.includes(String(provider))) return false;
+
+      // Validate timeout values
+      if (
+        aiConfig.timeout &&
+        (typeof aiConfig.timeout !== 'number' ||
+          aiConfig.timeout < 0 ||
+          aiConfig.timeout > 300000)
+      ) {
+        return false;
+      }
+
+      // Validate confidence threshold
+      if (
+        aiConfig.confidenceThreshold !== undefined &&
+        (typeof aiConfig.confidenceThreshold !== 'number' ||
+          aiConfig.confidenceThreshold < 0 ||
+          aiConfig.confidenceThreshold > 3)
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Check for dangerous keys that could lead to prototype pollution
+   */
+  private hasDangerousKeys(
+    obj: Record<string, unknown>,
+    dangerousKeys: string[]
+  ): boolean {
+    for (const key of Object.keys(obj)) {
+      if (dangerousKeys.includes(key)) return true;
+      if (
+        obj[key] &&
+        typeof obj[key] === 'object' &&
+        obj[key] !== null &&
+        this.hasDangerousKeys(
+          obj[key] as Record<string, unknown>,
+          dangerousKeys
+        )
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 }

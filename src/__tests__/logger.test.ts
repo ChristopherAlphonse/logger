@@ -241,7 +241,7 @@ describe('Logger', () => {
 
   describe('static factory methods', () => {
     test('should create JSON logger', () => {
-      const jsonLogger = Logger.createJsonLogger({ output: mockOutput });
+      const jsonLogger = LoggerFactory.createJsonLogger({ output: mockOutput });
       const config = jsonLogger.getConfig();
 
       expect(config.json).toBe(true);
@@ -249,7 +249,9 @@ describe('Logger', () => {
     });
 
     test('should create minimal logger', () => {
-      const minimalLogger = Logger.createMinimalLogger({ output: mockOutput });
+      const minimalLogger = LoggerFactory.createMinimalLogger({
+        output: mockOutput,
+      });
       const config = minimalLogger.getConfig();
 
       expect(config.timestamps).toBe(false);
@@ -258,7 +260,9 @@ describe('Logger', () => {
     });
 
     test('should create verbose logger', () => {
-      const verboseLogger = Logger.createVerboseLogger({ output: mockOutput });
+      const verboseLogger = LoggerFactory.createVerboseLogger({
+        output: mockOutput,
+      });
       const config = verboseLogger.getConfig();
 
       expect(config.level).toBe(LogLevel.TRACE);

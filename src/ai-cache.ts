@@ -1,20 +1,12 @@
 import { createHash } from 'crypto';
 import type { AIInsight, IAICache } from './types';
 
-/**
- * Cache entry with metadata
- */
 interface CacheEntry {
   insight: AIInsight;
   timestamp: number;
   ttl: number;
-  hits: number;
-  lastAccessed: number;
 }
 
-/**
- * Cache statistics
- */
 interface CacheStats {
   hits: number;
   misses: number;
@@ -23,9 +15,6 @@ interface CacheStats {
   totalRequests: number;
 }
 
-/**
- * In-memory cache for AI insights with TTL and LRU eviction
- */
 export class AICache implements IAICache {
   private cache = new Map<string, CacheEntry>();
   private cacheStats: CacheStats = {
@@ -39,21 +28,14 @@ export class AICache implements IAICache {
   private defaultTTL: number;
 
   constructor(maxSize = 1000, defaultTTL = 60 * 60 * 1000) {
-    // 1 hour default TTL
     this.maxSize = maxSize;
     this.defaultTTL = defaultTTL;
-
-    // Periodically clean up expired entries
-    setInterval(() => this.cleanup(), 5 * 60 * 1000); // Every 5 minutes
   }
 
-  /**
-   * Get an insight from cache
-   */
   async get(key: string): Promise<AIInsight | null> {
     this.cacheStats.totalRequests++;
-
     const entry = this.cache.get(key);
+
     if (!entry) {
       this.cacheStats.misses++;
       return null;
@@ -67,57 +49,31 @@ export class AICache implements IAICache {
       return null;
     }
 
-    // Update access metadata
-    entry.hits++;
-    entry.lastAccessed = Date.now();
-
-    // Mark insight as cached
-    const cachedInsight = { ...entry.insight, cached: true };
-
     this.cacheStats.hits++;
-    return cachedInsight;
+    return entry.insight;
   }
 
-  /**
-   * Set an insight in cache
-   */
   async set(key: string, insight: AIInsight, ttl?: number): Promise<void> {
-    const effectiveTTL = ttl || this.defaultTTL;
-    const now = Date.now();
-
-    // If cache is at max size, evict least recently used entries
-    if (this.cache.size >= this.maxSize && !this.cache.has(key)) {
+    // Evict if cache is full
+    if (this.cache.size >= this.maxSize) {
       this.evictLRU();
     }
 
     const entry: CacheEntry = {
-      insight: { ...insight, cached: false }, // Store original cached state
-      timestamp: now,
-      ttl: effectiveTTL,
-      hits: 0,
-      lastAccessed: now,
+      insight,
+      timestamp: Date.now(),
+      ttl: ttl || this.defaultTTL,
     };
 
-    const wasExisting = this.cache.has(key);
     this.cache.set(key, entry);
-
-    if (!wasExisting) {
-      this.cacheStats.size++;
-    }
+    this.cacheStats.size = this.cache.size;
   }
 
-  /**
-   * Clear all cache entries
-   */
   async clear(): Promise<void> {
     this.cache.clear();
     this.cacheStats.size = 0;
-    this.cacheStats.evictions = 0;
   }
 
-  /**
-   * Get cache statistics
-   */
   async stats(): Promise<{ hits: number; misses: number; size: number }> {
     return {
       hits: this.cacheStats.hits,
@@ -126,14 +82,9 @@ export class AICache implements IAICache {
     };
   }
 
-  /**
-   * Get detailed statistics including hit rate and evictions
-   */
   getDetailedStats(): CacheStats & { hitRate: number } {
-    const hitRate =
-      this.cacheStats.totalRequests > 0
-        ? this.cacheStats.hits / this.cacheStats.totalRequests
-        : 0;
+    const total = this.cacheStats.hits + this.cacheStats.misses;
+    const hitRate = total > 0 ? this.cacheStats.hits / total : 0;
 
     return {
       ...this.cacheStats,
@@ -141,63 +92,47 @@ export class AICache implements IAICache {
     };
   }
 
-  /**
-   * Evict least recently used entry
-   */
   private evictLRU(): void {
     let oldestKey: string | null = null;
     let oldestTime = Date.now();
 
     for (const [key, entry] of this.cache.entries()) {
-      if (entry.lastAccessed < oldestTime) {
-        oldestTime = entry.lastAccessed;
+      if (entry.timestamp < oldestTime) {
+        oldestTime = entry.timestamp;
         oldestKey = key;
       }
     }
 
     if (oldestKey) {
       this.cache.delete(oldestKey);
-      this.cacheStats.size--;
       this.cacheStats.evictions++;
+      this.cacheStats.size--;
     }
   }
 
-  /**
-   * Clean up expired entries
-   */
   private cleanup(): void {
     const now = Date.now();
-    const expiredKeys: string[] = [];
-
     for (const [key, entry] of this.cache.entries()) {
       if (now > entry.timestamp + entry.ttl) {
-        expiredKeys.push(key);
+        this.cache.delete(key);
+        this.cacheStats.size--;
       }
-    }
-
-    for (const key of expiredKeys) {
-      this.cache.delete(key);
-      this.cacheStats.size--;
     }
   }
 
-  /**
-   * Generate a cache key for an error
-   */
   static generateErrorKey(
     error: Error,
     context?: Record<string, unknown>
   ): string {
-    const contextStr = context ? JSON.stringify(context) : '';
-    const data = `${error.name}:${error.message}:${
-      error.stack?.substring(0, 200) || ''
-    }:${contextStr}`;
-    return createHash('md5').update(data).digest('hex');
+    const data = {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      context,
+    };
+    return createHash('md5').update(JSON.stringify(data)).digest('hex');
   }
 
-  /**
-   * Generate a cache key for a stack trace
-   */
   static generateStackTraceKey(
     stackFrames: Array<{
       functionName?: string;
@@ -206,115 +141,63 @@ export class AICache implements IAICache {
     }>,
     context?: Record<string, unknown>
   ): string {
-    const stackStr = stackFrames
-      .slice(0, 5) // Only use top 5 frames for key
-      .map(
-        frame =>
-          `${frame.functionName || 'anonymous'}:${
-            frame.fileName || 'unknown'
-          }:${frame.lineNumber || 0}`
-      )
-      .join('|');
-
-    const contextStr = context ? JSON.stringify(context) : '';
-    const data = `stack:${stackStr}:${contextStr}`;
-    return createHash('md5').update(data).digest('hex');
+    const data = {
+      frames: stackFrames,
+      context,
+    };
+    return createHash('md5').update(JSON.stringify(data)).digest('hex');
   }
 
-  /**
-   * Generate a cache key for a custom analysis
-   */
   static generateCustomKey(data: string): string {
     return createHash('md5').update(data).digest('hex');
   }
 
-  /**
-   * Preload common error patterns
-   */
   async preloadCommonPatterns(): Promise<void> {
-    const commonPatterns = [
-      {
-        key: this.generateCommonErrorKey('TypeError', 'Cannot read property'),
-        insight: {
-          explanation:
-            "You're trying to access a property on null or undefined.",
-          likelyCauses: [
-            'Variable not initialized',
-            'Async operation not completed',
-            'API returned null/undefined',
-          ],
-          suggestedFix: 'Use optional chaining (?.) or null checks',
-          contextualInsights: [
-            'This is one of the most common JavaScript errors',
-            'Consider using TypeScript for better type safety',
-          ],
-          confidence: 2, // HIGH
-          processingTime: 0,
-          cached: true,
-        } as AIInsight,
-      },
-      {
-        key: this.generateCommonErrorKey('ReferenceError', 'is not defined'),
-        insight: {
-          explanation:
-            "You're trying to use a variable that hasn't been declared.",
-          likelyCauses: [
-            'Typo in variable name',
-            'Missing import statement',
-            'Variable out of scope',
-          ],
-          suggestedFix: 'Check spelling and ensure proper imports',
-          contextualInsights: [
-            'Common in module systems',
-            'Check your import/export statements',
-          ],
-          confidence: 2, // HIGH
-          processingTime: 0,
-          cached: true,
-        } as AIInsight,
-      },
+    const commonErrors = [
+      'TypeError: Cannot read property',
+      'ReferenceError: Cannot access',
+      'SyntaxError: Unexpected token',
+      'RangeError: Maximum call stack size exceeded',
+      'URIError: URI malformed',
     ];
 
-    for (const pattern of commonPatterns) {
-      await this.set(pattern.key, pattern.insight, this.defaultTTL * 24); // Cache for 24 hours
+    for (const errorPattern of commonErrors) {
+      const key = this.generateCommonErrorKey('TypeError', errorPattern);
+      const mockInsight: AIInsight = {
+        explanation: `Common ${errorPattern} error`,
+        likelyCauses: ['Undefined variable', 'Missing property'],
+        suggestedFix: 'Check variable initialization',
+        contextualInsights: ['Ensure proper variable scope'],
+        confidence: 2, // HIGH
+        processingTime: 0,
+        cached: true,
+      };
+      await this.set(key, mockInsight, 24 * 60 * 60 * 1000); // 24 hours
     }
   }
 
-  /**
-   * Generate key for common error patterns
-   */
   private generateCommonErrorKey(
     errorType: string,
     messagePattern: string
   ): string {
     return createHash('md5')
-      .update(`common:${errorType}:${messagePattern}`)
+      .update(`${errorType}:${messagePattern}`)
       .digest('hex');
   }
 
-  /**
-   * Get cache efficiency metrics
-   */
   getEfficiencyMetrics(): {
     hitRate: number;
     averageHitsPerEntry: number;
     cacheUtilization: number;
     evictionRate: number;
   } {
-    const hitRate =
-      this.cacheStats.totalRequests > 0
-        ? this.cacheStats.hits / this.cacheStats.totalRequests
-        : 0;
-
-    let totalHits = 0;
-    for (const entry of this.cache.values()) {
-      totalHits += entry.hits;
-    }
+    const total = this.cacheStats.hits + this.cacheStats.misses;
+    const hitRate = total > 0 ? this.cacheStats.hits / total : 0;
     const averageHitsPerEntry =
-      this.cache.size > 0 ? totalHits / this.cache.size : 0;
-
-    const cacheUtilization = this.cache.size / this.maxSize;
-
+      this.cacheStats.size > 0
+        ? this.cacheStats.hits / this.cacheStats.size
+        : 0;
+    const cacheUtilization = this.cacheStats.size / this.maxSize;
     const evictionRate =
       this.cacheStats.totalRequests > 0
         ? this.cacheStats.evictions / this.cacheStats.totalRequests
@@ -328,31 +211,19 @@ export class AICache implements IAICache {
     };
   }
 
-  /**
-   * Optimize cache by removing low-value entries
-   */
   optimize(): void {
-    if (this.cache.size <= this.maxSize * 0.8) {
-      return; // Cache not full enough to optimize
+    this.cleanup();
+
+    // If cache utilization is low, reduce max size
+    if (this.cacheStats.size < this.maxSize * 0.3) {
+      this.maxSize = Math.max(100, Math.floor(this.maxSize * 0.8));
     }
 
-    const entries = Array.from(this.cache.entries());
-
-    // Sort by value score (hits / age)
-    entries.sort(([, a], [, b]) => {
-      const ageA = Date.now() - a.timestamp;
-      const ageB = Date.now() - b.timestamp;
-      const scoreA = a.hits / (ageA / (1000 * 60 * 60)); // hits per hour
-      const scoreB = b.hits / (ageB / (1000 * 60 * 60)); // hits per hour
-      return scoreB - scoreA;
-    });
-
-    // Remove bottom 20% of entries
-    const removeCount = Math.floor(this.cache.size * 0.2);
-    for (let i = entries.length - removeCount; i < entries.length; i++) {
-      this.cache.delete(entries[i][0]);
-      this.cacheStats.size--;
-      this.cacheStats.evictions++;
+    // If eviction rate is high, increase max size
+    const evictionRate =
+      this.cacheStats.evictions / Math.max(1, this.cacheStats.totalRequests);
+    if (evictionRate > 0.1) {
+      this.maxSize = Math.min(10000, Math.floor(this.maxSize * 1.2));
     }
   }
 }
