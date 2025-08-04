@@ -43,9 +43,9 @@ describe('Logger', () => {
       const config = defaultLogger.getConfig();
 
       expect(config.level).toBe(LogLevel.INFO);
-      expect(config.timestamps).toBe(true);
+      expect(config.timestamps).toBe(false);
       expect(config.colors).toBe(true);
-      expect(config.showSource).toBe(false);
+      expect(config.showSource).toBe(true);
       expect(config.json).toBe(false);
     });
 
