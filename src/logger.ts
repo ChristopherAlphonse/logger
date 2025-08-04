@@ -1,6 +1,13 @@
 import { LoggerFactory } from './factories';
 import { LogFormatter } from './formatters';
-import { type ILogger, type LogData, type LogEntry, LogLevel, type LoggerConfig } from './types';
+import {
+  type ILogger,
+  type LogData,
+  type LogEntry,
+  LogLevel,
+  type LoggerConfig,
+} from './types';
+import { processConsoleArgsWithFormatting } from './console-utils';
 
 /**
  * A customizable logger class that wraps console output with color support using chalk.
@@ -49,10 +56,10 @@ export class Logger implements ILogger {
   constructor(config: LoggerConfig = {}) {
     this.config = {
       level: LogLevel.INFO,
-      timestamps: true,
+      timestamps: false, // Changed: Disable timestamps by default
       colors: true,
       timestampFormat: 'HH:mm:ss',
-      showSource: false,
+      showSource: true, // Changed: Enable source tracking by default (file:line)
       prefix: '',
       json: false,
       output: process.stdout,
@@ -165,6 +172,71 @@ export class Logger implements ILogger {
 
     const output = this.formatter.formatLogEntry(entry, this.config);
     this.write(output);
+  }
+
+  // Console Compatibility Methods
+
+  /**
+   * Console.log compatible method - logs multiple arguments like console.log
+   *
+   * This method provides seamless migration from console.log to our logger.
+   * It supports multiple arguments, format strings, and object logging.
+   * Maps to INFO level by default.
+   *
+   * @param args - Any number of arguments, processed like console.log
+   *
+   * @example
+   * ```typescript
+   * // All of these work like console.log:
+   * logger.logConsole('Hello world');
+   * logger.logConsole('User:', user, 'Action:', action);
+   * logger.logConsole('Count: %d, Name: %s', 42, 'John');
+   * logger.logConsole('Data:', { key: 'value' }, [1, 2, 3]);
+   * ```
+   */
+  logConsole(...args: any[]): void {
+    const { message, data } = processConsoleArgsWithFormatting(args);
+    this.info(message, data);
+  }
+
+  /**
+   * Console.warn compatible method - processes multiple arguments like console.warn
+   *
+   * @param args - Any number of arguments, processed like console.warn
+   */
+  warnConsole(...args: any[]): void {
+    const { message, data } = processConsoleArgsWithFormatting(args);
+    this.warn(message, data);
+  }
+
+  /**
+   * Console.error compatible method - processes multiple arguments like console.error
+   *
+   * @param args - Any number of arguments, processed like console.error
+   */
+  errorConsole(...args: any[]): void {
+    const { message, data } = processConsoleArgsWithFormatting(args);
+    this.error(message, data);
+  }
+
+  /**
+   * Console.info compatible method - processes multiple arguments like console.info
+   *
+   * @param args - Any number of arguments, processed like console.info
+   */
+  infoConsole(...args: any[]): void {
+    const { message, data } = processConsoleArgsWithFormatting(args);
+    this.info(message, data);
+  }
+
+  /**
+   * Console.debug compatible method - processes multiple arguments like console.debug
+   *
+   * @param args - Any number of arguments, processed like console.debug
+   */
+  debugConsole(...args: any[]): void {
+    const { message, data } = processConsoleArgsWithFormatting(args);
+    this.debug(message, data);
   }
 
   /**
@@ -348,7 +420,9 @@ export class Logger implements ILogger {
    */
   table(
     dataOrLevel: LogLevel | Record<string, unknown>[],
-    dataOrOptions?: Record<string, unknown>[] | { headers?: string[]; border?: boolean },
+    dataOrOptions?:
+      | Record<string, unknown>[]
+      | { headers?: string[]; border?: boolean },
     options: { headers?: string[]; border?: boolean } = {}
   ): void {
     let level: LogLevel;
@@ -358,7 +432,8 @@ export class Logger implements ILogger {
     if (Array.isArray(dataOrLevel)) {
       level = LogLevel.INFO;
       data = dataOrLevel;
-      finalOptions = (dataOrOptions as { headers?: string[]; border?: boolean }) || {};
+      finalOptions =
+        (dataOrOptions as { headers?: string[]; border?: boolean }) || {};
     } else {
       level = dataOrLevel;
       data = dataOrOptions as Record<string, unknown>[];
@@ -385,7 +460,12 @@ export class Logger implements ILogger {
       const output = this.formatter.formatJson(entry);
       this.write(output);
     } else {
-      const outputs = this.formatter.formatTable(entry, data, this.config, finalOptions);
+      const outputs = this.formatter.formatTable(
+        entry,
+        data,
+        this.config,
+        finalOptions
+      );
       for (const output of outputs) {
         this.write(output);
       }
@@ -417,7 +497,8 @@ export class Logger implements ILogger {
       const match = line.match(/at\s+(.+?)\s+\((.+):(\d+):(\d+)\)/);
       if (match) {
         const [, _functionName, filePath, lineNum] = match;
-        const fileName = filePath.split('/').pop()?.split('\\').pop() || 'unknown';
+        const fileName =
+          filePath.split('/').pop()?.split('\\').pop() || 'unknown';
         return `${fileName}:${lineNum}`;
       }
     }
