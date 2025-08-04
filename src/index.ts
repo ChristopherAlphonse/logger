@@ -1,19 +1,32 @@
 export { Logger } from './logger';
+export { EnhancedLogger } from './enhanced-logger';
 export { LogLevel } from './types';
-export type { LoggerConfig, LogEntry, ILogger, LogData } from './types';
+export type {
+  LoggerConfig,
+  LogEntry,
+  ILogger,
+  LogData,
+  AIInsight,
+  ErrorAnalysis,
+} from './types';
 export { LoggerFactory } from './factories';
 export { LogFormatter } from './formatters';
+export { ConfigManager } from './config-manager';
+export { EnhancedAIService } from './enhanced-ai-service';
+export { AIEngine } from './ai-engine';
 
 import { LoggerFactory } from './factories';
 import { Logger } from './logger';
+import { EnhancedLogger } from './enhanced-logger';
 import { LogLevel } from './types';
 import type { LogData, LoggerConfig } from './types';
 
 /**
- * Default logger instance with INFO level and sensible defaults.
+ * Default enhanced logger instance with INFO level and AI-powered error analysis.
  *
  * This is a pre-configured logger instance that you can use immediately
- * without any setup. It includes timestamps, colors, and INFO level logging.
+ * without any setup. It includes timestamps, colors, INFO level logging,
+ * and FREE AI-powered error analysis (when Ollama is available).
  *
  * @example
  * ```typescript
@@ -22,10 +35,16 @@ import type { LogData, LoggerConfig } from './types';
  * const logger = require('@calphonse/logger');
  *
  * logger.info('Application started');
- * logger.error('Something went wrong', { errorCode: 'ERR001' });
+ *
+ * // AI will automatically analyze this error!
+ * try {
+ *   // some code that might fail
+ * } catch (error) {
+ *   logger.error('Something went wrong', error);
+ * }
  * ```
  */
-const defaultLogger = new Logger();
+const defaultLogger = new EnhancedLogger();
 
 /**
  * Convenience functions for quick logging using the default logger instance.
@@ -49,7 +68,8 @@ const log = {
    * @param message - The error message to log
    * @param data - Optional metadata or additional details
    */
-  error: (message: string, data?: LogData) => defaultLogger.error(message, data),
+  error: (message: string, data?: LogData) =>
+    defaultLogger.error(message, data),
 
   /**
    * Log a warning message with optional data
@@ -70,24 +90,28 @@ const log = {
    * @param message - The debug message to log
    * @param data - Optional metadata or additional details
    */
-  debug: (message: string, data?: LogData) => defaultLogger.debug(message, data),
+  debug: (message: string, data?: LogData) =>
+    defaultLogger.debug(message, data),
 
   /**
    * Log a trace message with optional data
    * @param message - The trace message to log
    * @param data - Optional metadata or additional details
    */
-  trace: (message: string, data?: LogData) => defaultLogger.trace(message, data),
+  trace: (message: string, data?: LogData) =>
+    defaultLogger.trace(message, data),
 };
 
 /**
  * Create a new logger instance with custom configuration.
  *
  * This function creates a fresh logger instance with the specified configuration.
- * If no configuration is provided, it uses sensible defaults.
+ * If no configuration is provided, it uses sensible defaults. Returns the enhanced
+ * logger with AI capabilities by default.
  *
  * @param config - Optional configuration options for the logger
- * @returns A new Logger instance
+ * @param enhanced - Whether to create an enhanced logger with AI capabilities (default: true)
+ * @returns A new Logger or EnhancedLogger instance
  *
  * @example
  * ```typescript
@@ -95,17 +119,30 @@ const log = {
  * // or
  * const logger = require('@calphonse/logger');
  *
- * const customLogger = logger.createLogger({
+ * // Enhanced logger with AI (default)
+ * const aiLogger = logger.createLogger({
  *   level: logger.LogLevel.DEBUG,
  *   prefix: 'API',
  *   colors: true,
  *   timestamps: true
  * });
  *
- * customLogger.debug('Request received', { method: 'GET', path: '/users' });
+ * // Traditional logger (without AI)
+ * const basicLogger = logger.createLogger({
+ *   level: logger.LogLevel.DEBUG,
+ *   prefix: 'API'
+ * }, false);
+ *
+ * // AI will analyze errors automatically!
+ * try {
+ *   // your code
+ * } catch (error) {
+ *   aiLogger.error('Request failed', error);
+ * }
  * ```
  */
-const createLogger = (config?: Partial<LoggerConfig>) => new Logger(config);
+const createLogger = (config?: Partial<LoggerConfig>, enhanced = true) =>
+  enhanced ? new EnhancedLogger(config) : new Logger(config);
 
 /**
  * Create a child logger with a prefix using the default logger instance.
@@ -197,7 +234,8 @@ const setLogLevel = (level: LogLevel) => defaultLogger.setLevel(level);
  * });
  * ```
  */
-const configureLogger = (config: Partial<LoggerConfig>) => defaultLogger.setConfig(config);
+const configureLogger = (config: Partial<LoggerConfig>) =>
+  defaultLogger.setConfig(config);
 
 const mainLogger = {
   error: defaultLogger.error.bind(defaultLogger),
