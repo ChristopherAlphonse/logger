@@ -1,15 +1,15 @@
-import OpenAI from 'openai';
-import { Ollama } from 'ollama';
-import { ConfidenceLevel, LogLevel } from './types';
 import type {
   AIInsight,
-  ErrorAnalysis,
   FrameworkContext,
-  StackFrame,
   IAIService,
+  StackFrame,
 } from './types';
-import { ConfigManager } from './config-manager';
+import { ConfidenceLevel, LogLevel } from './types';
+
 import { AICache } from './ai-cache';
+import { ConfigManager } from './config-manager';
+import { Ollama } from 'ollama';
+import OpenAI from 'openai';
 import { createInternalLogger } from './internalLogger';
 
 const internalLogger = createInternalLogger('[AI-SERVICE]');
@@ -552,5 +552,187 @@ Provide analysis in JSON format.`;
     }
 
     return sanitized;
+  }
+
+  async translateLog(
+    message: string,
+    level: LogLevel,
+    data?: any
+  ): Promise<string> {
+    const config = this.configManager.getAIConfig();
+
+    if (!config.enabled || !config.translateLogs) {
+      return message;
+    }
+
+    // Check if this log level should be translated
+    if (!config.translateLogLevels.includes(level)) {
+      return message;
+    }
+
+    try {
+      const startTime = Date.now();
+
+      // Create context for translation
+      const context = {
+        level: LogLevel[level],
+        timestamp: new Date().toISOString(),
+        data: data ? this.sanitizeContext({ data }) : undefined,
+      };
+
+      const translatedMessage = await this.generateLogTranslation(
+        message,
+        context
+      );
+
+      const processingTime = Date.now() - startTime;
+      internalLogger.info('Log translation completed', {
+        originalLength: message.length,
+        translatedLength: translatedMessage.length,
+        processingTime,
+      });
+
+      this.recordRequest();
+      return translatedMessage;
+    } catch (error) {
+      internalLogger.warn('Log translation failed, using original message', {
+        error,
+        originalMessage: message,
+      });
+      return message;
+    }
+  }
+
+  private async generateLogTranslation(
+    message: string,
+    context: Record<string, unknown>
+  ): Promise<string> {
+    const config = this.configManager.getAIConfig();
+
+    switch (config.provider) {
+      case 'ollama':
+        return await this.generateOllamaTranslation(message, context);
+      case 'openai':
+        return await this.generateOpenAITranslation(message, context);
+      case 'claude':
+        return await this.generateClaudeTranslation(message, context);
+      default:
+        return message;
+    }
+  }
+
+  private async generateOllamaTranslation(
+    message: string,
+    context: Record<string, unknown>
+  ): Promise<string> {
+    if (!this.ollama) {
+      throw new Error('Ollama not initialized');
+    }
+
+    const config = this.configManager.getAIConfig();
+    const prompt = this.buildTranslationPrompt(message, context);
+
+    const response = await this.ollama.generate({
+      model: config.ollama?.model || 'llama3.2:3b',
+      prompt,
+      options: {
+        temperature: config.ollama?.temperature || 0.3,
+        num_predict: config.ollama?.maxTokens || 200,
+      },
+      stream: false,
+    });
+
+    return this.parseTranslationResponse(response.response);
+  }
+
+  private async generateOpenAITranslation(
+    message: string,
+    context: Record<string, unknown>
+  ): Promise<string> {
+    if (!this.openai) {
+      throw new Error('OpenAI not initialized');
+    }
+
+    const config = this.configManager.getAIConfig();
+    const prompt = this.buildTranslationPrompt(message, context);
+
+    const response = await this.openai.chat.completions.create({
+      model: config.openai?.model || 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are a helpful assistant that translates technical log messages into clear, human-readable explanations.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      max_tokens: config.openai?.maxTokens || 200,
+      temperature: config.openai?.temperature || 0.3,
+    });
+
+    return this.parseTranslationResponse(
+      response.choices[0]?.message?.content || message
+    );
+  }
+
+  private async generateClaudeTranslation(
+    message: string,
+    context: Record<string, unknown>
+  ): Promise<string> {
+    // Claude implementation placeholder
+
+    return message;
+  }
+
+  private buildTranslationPrompt(
+    message: string,
+    context: Record<string, unknown>
+  ): string {
+    const config = this.configManager.getAIConfig();
+    const customPrompt = config.prompts?.logTranslation;
+
+    if (customPrompt) {
+      return customPrompt
+        .replace('{message}', message)
+        .replace('{context}', JSON.stringify(context, null, 2));
+    }
+
+    const levelStr = (context.level as string) || 'INFO';
+    const dataStr = context.data
+      ? `\nAdditional data: ${JSON.stringify(context.data, null, 2)}`
+      : '';
+
+    return `Please translate this technical ${levelStr} log message into a clear, human-readable explanation that a non-technical person could understand. Keep it concise but informative:
+
+Technical log message: "${message}"${dataStr}
+
+Provide only the human-readable translation without any additional formatting or explanations.`;
+  }
+
+  private parseTranslationResponse(response: string): string {
+    let cleaned = response.trim();
+
+    const prefixes = [
+      'Human-readable translation:',
+      'Translation:',
+      'Explanation:',
+      'The message means:',
+      'This means:',
+    ];
+
+    for (const prefix of prefixes) {
+      if (cleaned.toLowerCase().startsWith(prefix.toLowerCase())) {
+        cleaned = cleaned.substring(prefix.length).trim();
+      }
+    }
+
+    if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+      cleaned = cleaned.slice(1, -1);
+    }
+
+    return cleaned || response;
   }
 }

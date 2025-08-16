@@ -54,6 +54,8 @@ const DEFAULT_CONFIG: LoggerAIConfig = {
     confidenceThreshold: 1, // MEDIUM confidence
     maxInsightLength: 500,
     timeout: 10000,
+    translateLogs: false, // Disabled by default
+    translateLogLevels: [0, 1], // ERROR and WARN levels by default
     ollama: {
       baseUrl: 'http://localhost:11434',
       model: 'llama3.2:3b',
@@ -69,6 +71,9 @@ const DEFAULT_CONFIG: LoggerAIConfig = {
       model: 'claude-3-haiku-20240307',
       temperature: 0.7,
       maxTokens: 1000,
+    },
+    prompts: {
+      logTranslation: undefined, // Will use default prompt
     },
     rateLimit: {
       maxRequestsPerMinute: 60,
