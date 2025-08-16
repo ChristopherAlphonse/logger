@@ -36,7 +36,7 @@ export enum ConfidenceLevel {
 /**
  * AI provider types
  */
-export type AIProvider = 'openai' | 'claude' | 'local' | 'disabled';
+export type AIProvider = 'openai' | 'claude' | 'ollama' | 'disabled';
 
 /**
  * Framework context types
@@ -127,11 +127,38 @@ export interface AIConfig {
   maxInsightLength: number;
   /** Timeout for AI requests in milliseconds */
   timeout: number;
+  /** Enable log message translation to human-readable format */
+  translateLogs: boolean;
+  /** Log levels that should be translated (default: error, warn) */
+  translateLogLevels: LogLevel[];
+  /** Ollama-specific configuration */
+  ollama?: {
+    baseUrl?: string;
+    model?: string;
+    temperature?: number;
+    maxTokens?: number;
+  };
+  /** OpenAI-specific configuration */
+  openai?: {
+    apiKey?: string;
+    model?: string;
+    temperature?: number;
+    maxTokens?: number;
+    organization?: string;
+  };
+  /** Claude-specific configuration */
+  claude?: {
+    apiKey?: string;
+    model?: string;
+    temperature?: number;
+    maxTokens?: number;
+  };
   /** Custom prompt templates */
   prompts?: {
     errorAnalysis?: string;
     stackTraceAnalysis?: string;
     contextAnalysis?: string;
+    logTranslation?: string;
   };
   /** Rate limiting configuration */
   rateLimit?: {
@@ -179,7 +206,7 @@ export interface LoggerConfig {
   /** Whether to enable JSON output format */
   json?: boolean;
   /** Custom output stream */
-  output?: NodeJS.WritableStream;
+  output?: any;
   /** AI configuration options */
   ai?: Partial<AIConfig>;
 }
@@ -221,6 +248,8 @@ export interface ILogger {
   getInsight?(error: Error): Promise<AIInsight | null>;
   enableAI?(config?: Partial<AIConfig>): void;
   disableAI?(): void;
+  enableLogTranslation?(): void;
+  disableLogTranslation?(): void;
 }
 
 /**
@@ -239,6 +268,11 @@ export interface IAIService {
     stackTrace: StackFrame[],
     errorMessage: string
   ): FrameworkContext;
+  translateLog(
+    message: string,
+    level: LogLevel,
+    data?: LogData
+  ): Promise<string>;
   isHealthy(): Promise<boolean>;
 }
 

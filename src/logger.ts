@@ -79,6 +79,17 @@ export class Logger implements ILogger {
 
     this.formatter = new LogFormatter();
     this.configManager = ConfigManager.getInstance();
+    
+    // Update AI configuration if provided
+    if (config.ai) {
+      this.configManager.updateConfig({
+        ai: {
+          ...this.configManager.getAIConfig(),
+          ...config.ai,
+        },
+      });
+    }
+    
     this.initializeAI();
   }
 
@@ -168,12 +179,27 @@ export class Logger implements ILogger {
    *
    * @remarks
    * The message is only logged if the specified level is enabled based on the configured minimum log level.
+   * If AI translation is enabled, the message may be translated to human-readable format.
    */
   log(level: LogLevel, message: string, data?: LogData): void {
     if (!this.isEnabled(level)) {
       return;
     }
 
+    // If AI translation is enabled, translate the message first
+    if (this.shouldTranslateLog(level)) {
+      this.logWithTranslation(level, message, data);
+      return;
+    }
+
+    // Standard logging without translation
+    this.logDirect(level, message, data);
+  }
+
+  /**
+   * Log directly without translation
+   */
+  private logDirect(level: LogLevel, message: string, data?: LogData): void {
     const entry: LogEntry = {
       level,
       message,
@@ -188,6 +214,84 @@ export class Logger implements ILogger {
 
     const output = this.formatter.formatLogEntry(entry, this.config);
     this.write(output);
+  }
+
+  /**
+   * Log with AI translation
+   */
+  private async logWithTranslation(level: LogLevel, message: string, data?: LogData): Promise<void> {
+    // First, always log the original message
+    this.logDirect(level, message, data);
+
+    // Then attempt to get AI translation and display it as additional context
+    try {
+      if (this.aiService) {
+        const translatedMessage = await this.aiService.translateLog(message, level, data);
+        
+        // Only show translation if it's different from the original
+        if (translatedMessage && translatedMessage !== message) {
+          this.displayAITranslation(translatedMessage, level);
+        }
+      }
+    } catch (error) {
+      // Silently fail - original message was already logged
+      const internalLogger = createInternalLogger('[LOGGER]');
+      internalLogger.warn('Log translation failed', { error, originalMessage: message });
+    }
+  }
+
+  /**
+   * Display AI translation as additional context
+   */
+  private displayAITranslation(translatedMessage: string, level: LogLevel): void {
+    const prefix = this.config.prefix ? `[${this.config.prefix}] ` : '';
+    
+    // Simple colored output without accessing formatter internals
+    if (this.config.colors) {
+      // Use basic ANSI color codes for the translation
+      let colorCode = '';
+      switch (level) {
+        case LogLevel.ERROR:
+          colorCode = '\x1b[91m'; // Bright red
+          break;
+        case LogLevel.WARN:
+          colorCode = '\x1b[93m'; // Bright yellow
+          break;
+        case LogLevel.INFO:
+          colorCode = '\x1b[94m'; // Bright blue
+          break;
+        case LogLevel.DEBUG:
+        case LogLevel.TRACE:
+          colorCode = '\x1b[90m'; // Gray
+          break;
+      }
+      const resetCode = '\x1b[0m';
+      const output = `${prefix}💡 AI Translation: ${colorCode}${translatedMessage}${resetCode}\n`;
+      this.write(output);
+    } else {
+      const output = `${prefix}💡 AI Translation: ${translatedMessage}\n`;
+      this.write(output);
+    }
+  }
+
+  /**
+   * Get color function for log level
+   */
+  private getLevelColor(level: LogLevel): ((text: string) => string) | null {
+    // Removed this method as we're using direct ANSI codes instead
+    return null;
+  }
+
+  /**
+   * Determine if log should be translated
+   */
+  private shouldTranslateLog(level: LogLevel): boolean {
+    if (!this.aiService) return false;
+    
+    const aiConfig = this.configManager.getAIConfig();
+    return aiConfig.enabled && 
+           aiConfig.translateLogs && 
+           aiConfig.translateLogLevels.includes(level);
   }
 
   // Console Compatibility Methods
@@ -504,15 +608,43 @@ export class Logger implements ILogger {
     if (!stack) return 'unknown';
 
     const lines = stack.split('\n');
-    for (let i = 3; i < lines.length; i++) {
+    for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
-      if (line.includes('node_modules') || line.includes('packages/logger')) {
+      
+      // Skip internal logger methods and node_modules
+      if (
+        line.includes('node_modules') || 
+        line.includes('packages/logger') ||
+        line.includes('Logger.log') ||
+        line.includes('Logger.logDirect') ||
+        line.includes('Logger.logWithTranslation') ||
+        line.includes('Logger.error') ||
+        line.includes('Logger.warn') ||
+        line.includes('Logger.info') ||
+        line.includes('Logger.debug') ||
+        line.includes('Logger.trace') ||
+        line.includes('getSourceInfo') ||
+        line.includes('formatLogEntry') ||
+        line.includes('write')
+      ) {
         continue;
       }
 
-      const match = line.match(/at\s+(.+?)\s+\((.+):(\d+):(\d+)\)/);
+      // Try different stack trace formats
+      const regex1 = /at\s+(.+?)\s+\((.+):(\d+):(\d+)\)/;
+      let match = regex1.exec(line);
       if (match) {
         const [, _functionName, filePath, lineNum] = match;
+        const fileName =
+          filePath.split('/').pop()?.split('\\').pop() || 'unknown';
+        return `${fileName}:${lineNum}`;
+      }
+
+      // Try format without function name (anonymous functions)
+      const regex2 = /at\s+(.+):(\d+):(\d+)/;
+      match = regex2.exec(line);
+      if (match) {
+        const [, filePath, lineNum] = match;
         const fileName =
           filePath.split('/').pop()?.split('\\').pop() || 'unknown';
         return `${fileName}:${lineNum}`;
@@ -626,13 +758,32 @@ export class Logger implements ILogger {
   }
 
   enableAI(): void {
-    if (!this.aiService) {
-      this.aiService = new AIService();
-    }
+    this.aiService ??= new AIService();
   }
 
   disableAI(): void {
     this.aiService = null;
+  }
+
+  enableLogTranslation(): void {
+    this.configManager.updateConfig({
+      ai: {
+        ...this.configManager.getAIConfig(),
+        translateLogs: true,
+      },
+    });
+    
+    // Ensure AI service is initialized
+    this.aiService ??= new AIService();
+  }
+
+  disableLogTranslation(): void {
+    this.configManager.updateConfig({
+      ai: {
+        ...this.configManager.getAIConfig(),
+        translateLogs: false,
+      },
+    });
   }
 
   async isAIHealthy(): Promise<boolean> {

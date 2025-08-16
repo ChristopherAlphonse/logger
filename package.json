@@ -47,7 +47,9 @@
     "example:basic": "tsx examples/basic-usage.ts",
     "example:error": "tsx examples/error-handling-demo.ts",
     "example:ai-demo": "tsx examples/ai-powered-demo.ts",
-    "setup-ai": "tsx examples/setup-ai-config.ts"
+    "example:ollama": "tsx examples/ollama-translation-demo.ts",
+    "setup-ai": "tsx examples/setup-ai-config.ts",
+    "test-translation": "tsx test-translation.ts"
   },
   "dependencies": {
     "chalk": "^5.3.0",
