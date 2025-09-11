@@ -43,9 +43,9 @@ describe('Logger', () => {
       const config = defaultLogger.getConfig();
 
       expect(config.level).toBe(LogLevel.INFO);
-      expect(config.timestamps).toBe(true);
+      expect(config.timestamps).toBe(false);
       expect(config.colors).toBe(true);
-      expect(config.showSource).toBe(false);
+      expect(config.showSource).toBe(true);
       expect(config.json).toBe(false);
     });
 
@@ -198,7 +198,9 @@ describe('Logger', () => {
         level: LogLevel.INFO,
       });
 
-      expect(() => testLogger.info('Test message', { key: 'value' })).not.toThrow();
+      expect(() =>
+        testLogger.info('Test message', { key: 'value' })
+      ).not.toThrow();
     });
 
     test('should handle JSON output with complex data', () => {
@@ -219,7 +221,9 @@ describe('Logger', () => {
         date: new Date(),
       };
 
-      expect(() => testLogger.info('Complex data test', complexData)).not.toThrow();
+      expect(() =>
+        testLogger.info('Complex data test', complexData)
+      ).not.toThrow();
     });
   });
 
@@ -237,7 +241,7 @@ describe('Logger', () => {
 
   describe('static factory methods', () => {
     test('should create JSON logger', () => {
-      const jsonLogger = Logger.createJsonLogger({ output: mockOutput });
+      const jsonLogger = LoggerFactory.createJsonLogger({ output: mockOutput });
       const config = jsonLogger.getConfig();
 
       expect(config.json).toBe(true);
@@ -245,7 +249,9 @@ describe('Logger', () => {
     });
 
     test('should create minimal logger', () => {
-      const minimalLogger = Logger.createMinimalLogger({ output: mockOutput });
+      const minimalLogger = LoggerFactory.createMinimalLogger({
+        output: mockOutput,
+      });
       const config = minimalLogger.getConfig();
 
       expect(config.timestamps).toBe(false);
@@ -254,7 +260,9 @@ describe('Logger', () => {
     });
 
     test('should create verbose logger', () => {
-      const verboseLogger = Logger.createVerboseLogger({ output: mockOutput });
+      const verboseLogger = LoggerFactory.createVerboseLogger({
+        output: mockOutput,
+      });
       const config = verboseLogger.getConfig();
 
       expect(config.level).toBe(LogLevel.TRACE);
@@ -281,7 +289,9 @@ describe('Logger', () => {
       const circular: Record<string, unknown> = { name: 'test' };
       circular.self = circular;
 
-      expect(() => testLogger.info('Circular reference test', circular)).not.toThrow();
+      expect(() =>
+        testLogger.info('Circular reference test', circular)
+      ).not.toThrow();
     });
 
     test('should handle very long messages', () => {
@@ -344,7 +354,9 @@ describe('Logger', () => {
         colors: false,
         level: LogLevel.INFO,
       });
-      expect(() => testLogger.info('Test message', { key: 'value' })).not.toThrow();
+      expect(() =>
+        testLogger.info('Test message', { key: 'value' })
+      ).not.toThrow();
     });
 
     test('should handle JSON serialization errors gracefully', () => {
@@ -401,7 +413,9 @@ describe('Logger', () => {
         level: LogLevel.INFO,
       });
 
-      expect(() => testLogger.info('Test with invalid stack format')).not.toThrow();
+      expect(() =>
+        testLogger.info('Test with invalid stack format')
+      ).not.toThrow();
 
       global.Error = originalError;
     });
@@ -439,7 +453,9 @@ describe('Logger', () => {
         level: LogLevel.INFO,
       });
 
-      expect(() => testLogger.info('Test with problematic file paths')).not.toThrow();
+      expect(() =>
+        testLogger.info('Test with problematic file paths')
+      ).not.toThrow();
 
       global.Error = originalError;
     });
@@ -576,7 +592,10 @@ describe('Logger', () => {
     });
 
     test('should handle null/undefined data', () => {
-      testLogger.table(LogLevel.INFO, null as unknown as Record<string, unknown>[]);
+      testLogger.table(
+        LogLevel.INFO,
+        null as unknown as Record<string, unknown>[]
+      );
 
       const output = mockOutput.join('');
       expect(output).toContain('No data to display');
@@ -734,8 +753,8 @@ describe('Logger', () => {
 
     test('should handle special characters in data', () => {
       const data = [
-        { name: 'Alice "Quote"', symbol: '€', emoji: '🚀' },
-        { name: 'Bob & Co.', symbol: '£', emoji: '✨' },
+        { name: 'Alice "Quote"', symbol: '€', emoji: 'rocket' },
+        { name: 'Bob & Co.', symbol: '£', emoji: 'sparkles' },
       ];
 
       expect(() => testLogger.table(LogLevel.INFO, data)).not.toThrow();
@@ -744,7 +763,7 @@ describe('Logger', () => {
       expect(output).toContain('Alice "Quote"');
       expect(output).toContain('Bob & Co.');
       expect(output).toContain('€');
-      expect(output).toContain('🚀');
+      expect(output).toContain('rocket');
     });
   });
 

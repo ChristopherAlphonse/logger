@@ -1,6 +1,22 @@
+import chalkModule from 'chalk';
 import { LoggerFactory } from './factories';
 import { LogFormatter } from './formatters';
-import { type ILogger, type LogData, type LogEntry, LogLevel, type LoggerConfig } from './types';
+import {
+  type ILogger,
+  type LogData,
+  type LogEntry,
+  LogLevel,
+  type LoggerConfig,
+} from './types';
+import type { AIInsight, ErrorAnalysis } from './types';
+import { AIService } from './ai-service';
+import { ConfigManager } from './config-manager';
+import { processConsoleArgs } from './console-utils';
+import { createInternalLogger } from './internalLogger';
+
+const chalk =
+  (chalkModule as typeof chalkModule & { default?: typeof chalkModule })
+    ?.default || chalkModule;
 
 /**
  * A customizable logger class that wraps console output with color support using chalk.
@@ -17,6 +33,8 @@ import { type ILogger, type LogData, type LogEntry, LogLevel, type LoggerConfig 
 export class Logger implements ILogger {
   private config: LoggerConfig;
   private formatter: LogFormatter;
+  private aiService: AIService | null = null;
+  private configManager: ConfigManager;
 
   /**
    * Creates a new Logger instance with the specified configuration.
@@ -49,16 +67,39 @@ export class Logger implements ILogger {
   constructor(config: LoggerConfig = {}) {
     this.config = {
       level: LogLevel.INFO,
-      timestamps: true,
+      timestamps: false, // Changed: Disable timestamps by default
       colors: true,
       timestampFormat: 'HH:mm:ss',
-      showSource: false,
+      showSource: true, // Changed: Enable source tracking by default (file:line)
       prefix: '',
       json: false,
       output: process.stdout,
       ...config,
     };
+
+    // Validate output stream for security
+    if (this.config.output && !this.isValidOutputStream(this.config.output)) {
+      const internalLogger = createInternalLogger('[LOGGER]');
+      internalLogger.warn(
+        'Invalid output stream provided in configuration. Falling back to process.stdout. Please check your logger configuration.'
+      );
+      this.config.output = process.stdout;
+    }
+
     this.formatter = new LogFormatter();
+    this.configManager = ConfigManager.getInstance();
+
+    // Update AI configuration if provided
+    if (config.ai) {
+      this.configManager.updateConfig({
+        ai: {
+          ...this.configManager.getAIConfig(),
+          ...config.ai,
+        },
+      });
+    }
+
+    this.initializeAI();
   }
 
   /**
@@ -74,6 +115,7 @@ export class Logger implements ILogger {
    */
   error(message: string, data?: LogData): void {
     this.log(LogLevel.ERROR, message, data);
+    this.analyzeWithAI(LogLevel.ERROR, message, data);
   }
 
   /**
@@ -89,6 +131,7 @@ export class Logger implements ILogger {
    */
   warn(message: string, data?: LogData): void {
     this.log(LogLevel.WARN, message, data);
+    this.analyzeWithAI(LogLevel.WARN, message, data);
   }
 
   /**
@@ -145,12 +188,27 @@ export class Logger implements ILogger {
    *
    * @remarks
    * The message is only logged if the specified level is enabled based on the configured minimum log level.
+   * If AI translation is enabled, the message may be translated to human-readable format.
    */
   log(level: LogLevel, message: string, data?: LogData): void {
     if (!this.isEnabled(level)) {
       return;
     }
 
+    // If AI translation is enabled, translate the message first
+    if (this.shouldTranslateLog(level)) {
+      this.logWithTranslation(level, message, data);
+      return;
+    }
+
+    // Standard logging without translation
+    this.logDirect(level, message, data);
+  }
+
+  /**
+   * Log directly without translation
+   */
+  private logDirect(level: LogLevel, message: string, data?: LogData): void {
     const entry: LogEntry = {
       level,
       message,
@@ -165,6 +223,165 @@ export class Logger implements ILogger {
 
     const output = this.formatter.formatLogEntry(entry, this.config);
     this.write(output);
+  }
+
+  /**
+   * Log with AI translation
+   */
+  private async logWithTranslation(
+    level: LogLevel,
+    message: string,
+    data?: LogData
+  ): Promise<void> {
+    // First, always log the original message
+    this.logDirect(level, message, data);
+
+    // Then attempt to get AI translation and display it as additional context
+    try {
+      if (this.aiService) {
+        const translatedMessage = await this.aiService.translateLog(
+          message,
+          level,
+          data
+        );
+
+        // Only show translation if it's different from the original
+        if (translatedMessage && translatedMessage !== message) {
+          this.displayAITranslation(translatedMessage, level);
+        }
+      }
+    } catch (error) {
+      // Silently fail - original message was already logged
+      const internalLogger = createInternalLogger('[LOGGER]');
+      internalLogger.warn('Log translation failed', {
+        error,
+        originalMessage: message,
+      });
+    }
+  }
+
+  /**
+   * Display AI translation as additional context
+   */
+  private displayAITranslation(
+    translatedMessage: string,
+    level: LogLevel
+  ): void {
+    const prefix = this.config.prefix ? `[${this.config.prefix}] ` : '';
+
+    // Simple colored output without accessing formatter internals
+    if (this.config.colors) {
+      // Use basic ANSI color codes for the translation
+      let colorCode = '';
+      switch (level) {
+        case LogLevel.ERROR:
+          colorCode = '\x1b[91m'; // Bright red
+          break;
+        case LogLevel.WARN:
+          colorCode = '\x1b[93m'; // Bright yellow
+          break;
+        case LogLevel.INFO:
+          colorCode = '\x1b[94m'; // Bright blue
+          break;
+        case LogLevel.DEBUG:
+        case LogLevel.TRACE:
+          colorCode = '\x1b[90m'; // Gray
+          break;
+      }
+      const resetCode = '\x1b[0m';
+      const output = `${prefix}💡 AI Translation: ${colorCode}${translatedMessage}${resetCode}\n`;
+      this.write(output);
+    } else {
+      const output = `${prefix}💡 AI Translation: ${translatedMessage}\n`;
+      this.write(output);
+    }
+  }
+
+  /**
+   * Get color function for log level
+   */
+  private getLevelColor(level: LogLevel): ((text: string) => string) | null {
+    // Removed this method as we're using direct ANSI codes instead
+    return null;
+  }
+
+  /**
+   * Determine if log should be translated
+   */
+  private shouldTranslateLog(level: LogLevel): boolean {
+    if (!this.aiService) return false;
+
+    const aiConfig = this.configManager.getAIConfig();
+    return (
+      aiConfig.enabled &&
+      aiConfig.translateLogs &&
+      aiConfig.translateLogLevels.includes(level)
+    );
+  }
+
+  // Console Compatibility Methods
+
+  /**
+   * Console.log compatible method - logs multiple arguments like console.log
+   *
+   * This method provides seamless migration from console.log to our logger.
+   * It supports multiple arguments, format strings, and object logging.
+   * Maps to INFO level by default.
+   *
+   * @param args - Any number of arguments, processed like console.log
+   *
+   * @example
+   * ```typescript
+   * // All of these work like console.log:
+   * logger.logConsole('Hello world');
+   * logger.logConsole('User:', user, 'Action:', action);
+   * logger.logConsole('Count: %d, Name: %s', 42, 'John');
+   * logger.logConsole('Data:', { key: 'value' }, [1, 2, 3]);
+   * ```
+   */
+  logConsole(...args: any[]): void {
+    const { message, data } = processConsoleArgs(args);
+    this.info(message, data);
+  }
+
+  /**
+   * Console.warn compatible method - processes multiple arguments like console.warn
+   *
+   * @param args - Any number of arguments, processed like console.warn
+   */
+  warnConsole(...args: any[]): void {
+    const { message, data } = processConsoleArgs(args);
+    this.warn(message, data);
+  }
+
+  /**
+   * Console.error compatible method - processes multiple arguments like console.error
+   *
+   * @param args - Any number of arguments, processed like console.error
+   */
+  errorConsole(...args: any[]): void {
+    const { message, data } = processConsoleArgs(args);
+    this.error(message, data);
+  }
+
+  /**
+   * Console.info compatible method - processes multiple arguments like console.info
+   *
+   * @param args - Any number of arguments, processed like console.info
+   */
+  infoConsole(...args: any[]): void {
+    const { message, data } = processConsoleArgs(args);
+    this.info(message, data);
+  }
+
+  /**
+   * Console.debug compatible method - processes multiple arguments like console.debug
+   *
+   * @param args - Any number of arguments, processed like console.debug
+   */
+  debugConsole(...args: any[]): void {
+    const { message, data } = processConsoleArgs(args);
+    this.debug(message, data);
   }
 
   /**
@@ -348,7 +565,9 @@ export class Logger implements ILogger {
    */
   table(
     dataOrLevel: LogLevel | Record<string, unknown>[],
-    dataOrOptions?: Record<string, unknown>[] | { headers?: string[]; border?: boolean },
+    dataOrOptions?:
+      | Record<string, unknown>[]
+      | { headers?: string[]; border?: boolean },
     options: { headers?: string[]; border?: boolean } = {}
   ): void {
     let level: LogLevel;
@@ -358,7 +577,8 @@ export class Logger implements ILogger {
     if (Array.isArray(dataOrLevel)) {
       level = LogLevel.INFO;
       data = dataOrLevel;
-      finalOptions = (dataOrOptions as { headers?: string[]; border?: boolean }) || {};
+      finalOptions =
+        (dataOrOptions as { headers?: string[]; border?: boolean }) || {};
     } else {
       level = dataOrLevel;
       data = dataOrOptions as Record<string, unknown>[];
@@ -385,7 +605,12 @@ export class Logger implements ILogger {
       const output = this.formatter.formatJson(entry);
       this.write(output);
     } else {
-      const outputs = this.formatter.formatTable(entry, data, this.config, finalOptions);
+      const outputs = this.formatter.formatTable(
+        entry,
+        data,
+        this.config,
+        finalOptions
+      );
       for (const output of outputs) {
         this.write(output);
       }
@@ -408,16 +633,45 @@ export class Logger implements ILogger {
     if (!stack) return 'unknown';
 
     const lines = stack.split('\n');
-    for (let i = 3; i < lines.length; i++) {
+    for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
-      if (line.includes('node_modules') || line.includes('packages/logger')) {
+
+      // Skip internal logger methods and node_modules
+      if (
+        line.includes('node_modules') ||
+        line.includes('packages/logger') ||
+        line.includes('Logger.log') ||
+        line.includes('Logger.logDirect') ||
+        line.includes('Logger.logWithTranslation') ||
+        line.includes('Logger.error') ||
+        line.includes('Logger.warn') ||
+        line.includes('Logger.info') ||
+        line.includes('Logger.debug') ||
+        line.includes('Logger.trace') ||
+        line.includes('getSourceInfo') ||
+        line.includes('formatLogEntry') ||
+        line.includes('write')
+      ) {
         continue;
       }
 
-      const match = line.match(/at\s+(.+?)\s+\((.+):(\d+):(\d+)\)/);
+      // Try different stack trace formats
+      const regex1 = /at\s+(.+?)\s+\((.+):(\d+):(\d+)\)/;
+      let match = regex1.exec(line);
       if (match) {
         const [, _functionName, filePath, lineNum] = match;
-        const fileName = filePath.split('/').pop()?.split('\\').pop() || 'unknown';
+        const fileName =
+          filePath.split('/').pop()?.split('\\').pop() || 'unknown';
+        return `${fileName}:${lineNum}`;
+      }
+
+      // Try format without function name (anonymous functions)
+      const regex2 = /at\s+(.+):(\d+):(\d+)/;
+      match = regex2.exec(line);
+      if (match) {
+        const [, filePath, lineNum] = match;
+        const fileName =
+          filePath.split('/').pop()?.split('\\').pop() || 'unknown';
         return `${fileName}:${lineNum}`;
       }
     }
@@ -425,33 +679,211 @@ export class Logger implements ILogger {
     return 'unknown';
   }
 
-  // Static factory methods for backward compatibility
+  // Static factory methods removed - use LoggerFactory instead
+
   /**
-   * Creates a logger configured for JSON output, ideal for production environments
-   * and log aggregation systems.
-   *
-   * @deprecated Use LoggerFactory.createJsonLogger() instead
+   * Initialize AI service based on configuration
    */
-  static createJsonLogger(config: Partial<LoggerConfig> = {}): Logger {
-    return LoggerFactory.createJsonLogger(config);
+  private initializeAI(): void {
+    try {
+      const aiConfig = this.configManager.getAIConfig();
+      if (aiConfig.enabled) {
+        this.aiService = new AIService();
+      }
+    } catch (error) {
+      // AI initialization fails gracefully - logging still works without AI
+      const internalLogger = createInternalLogger('[LOGGER]');
+      internalLogger.warn('AI service initialization failed', { error });
+    }
   }
 
   /**
-   * Creates a logger with minimal output formatting, ideal for simple console output
-   * or when you want clean, uncluttered logs.
-   *
-   * @deprecated Use LoggerFactory.createMinimalLogger() instead
+   * Analyze message and data with AI
    */
-  static createMinimalLogger(config: Partial<LoggerConfig> = {}): Logger {
-    return LoggerFactory.createMinimalLogger(config);
+  private async analyzeWithAI(
+    level: LogLevel,
+    message: string,
+    data?: LogData
+  ): Promise<void> {
+    if (!this.aiService || !this.shouldAnalyzeWithAI(level, data)) {
+      return;
+    }
+
+    try {
+      const error = data instanceof Error ? data : (data as any)?.error;
+      if (error instanceof Error) {
+        const insight = await this.aiService.analyzeError(error, {
+          message,
+          data,
+        });
+        this.displayAIInsight(insight);
+      }
+    } catch (analysisError) {
+      const internalLogger = createInternalLogger('[LOGGER]');
+      internalLogger.warn('AI error analysis failed', { analysisError });
+    }
   }
 
   /**
-   * Creates a logger with verbose output formatting, ideal for development and debugging.
-   *
-   * @deprecated Use LoggerFactory.createVerboseLogger() instead
+   * Determine if AI analysis should be performed
    */
-  static createVerboseLogger(config: Partial<LoggerConfig> = {}): Logger {
-    return LoggerFactory.createVerboseLogger(config);
+  private shouldAnalyzeWithAI(level: LogLevel, data?: LogData): boolean {
+    if (level !== LogLevel.ERROR && level !== LogLevel.WARN) return false;
+
+    // Analyze if data contains an Error object
+    if (data instanceof Error) return true;
+    if (data && typeof data === 'object' && 'error' in data) return true;
+
+    return false;
+  }
+
+  /**
+   * Display AI insight in a formatted way
+   */
+  private displayAIInsight(insight: AIInsight): void {
+    const output = this.config.output?.write || process.stdout.write;
+
+    // Apply color formatting conditionally
+    const header = this.config.colors
+      ? chalk.cyan('\nAI Insight:\n')
+      : '\nAI Insight:\n';
+    const explanation = this.config.colors
+      ? chalk.blue(`   Explanation: ${insight.explanation}\n`)
+      : `   Explanation: ${insight.explanation}\n`;
+    const likelyCauses = this.config.colors
+      ? chalk.yellow(`   Likely Causes: ${insight.likelyCauses.join(', ')}\n`)
+      : `   Likely Causes: ${insight.likelyCauses.join(', ')}\n`;
+    const suggestedFix = this.config.colors
+      ? chalk.green(`   Suggested Fix: ${insight.suggestedFix}\n`)
+      : `   Suggested Fix: ${insight.suggestedFix}\n`;
+
+    // Output all content once
+    output(header);
+    output(explanation);
+    output(likelyCauses);
+    output(suggestedFix);
+
+    if (insight.contextualInsights.length > 0) {
+      const context = this.config.colors
+        ? chalk.magenta(
+            `   Context: ${insight.contextualInsights.join(', ')}\n`
+          )
+        : `   Context: ${insight.contextualInsights.join(', ')}\n`;
+      output(context);
+    }
+  }
+
+  // AI-specific methods
+  async analyzeError(error: Error): Promise<ErrorAnalysis> {
+    if (!this.aiService) {
+      throw new Error('AI service not initialized');
+    }
+    const insight = await this.aiService.analyzeError(error);
+    return {
+      error,
+      stackTrace: [],
+      errorType: error.name,
+      errorHash: '',
+      insight,
+    };
+  }
+
+  async getInsight(error: Error): Promise<AIInsight | null> {
+    if (!this.aiService) return null;
+    return await this.aiService.analyzeError(error);
+  }
+
+  enableAI(): void {
+    this.aiService ??= new AIService();
+  }
+
+  disableAI(): void {
+    this.aiService = null;
+  }
+
+  enableLogTranslation(): void {
+    this.configManager.updateConfig({
+      ai: {
+        ...this.configManager.getAIConfig(),
+        translateLogs: true,
+      },
+    });
+
+    // Ensure AI service is initialized
+    this.aiService ??= new AIService();
+  }
+
+  disableLogTranslation(): void {
+    this.configManager.updateConfig({
+      ai: {
+        ...this.configManager.getAIConfig(),
+        translateLogs: false,
+      },
+    });
+  }
+
+  async isAIHealthy(): Promise<boolean> {
+    if (!this.aiService) return false;
+    return await this.aiService.isHealthy();
+  }
+
+  async testAI(): Promise<{ success: boolean; message: string }> {
+    if (!this.aiService) {
+      return { success: false, message: 'AI service not initialized' };
+    }
+    const isHealthy = await this.aiService.isHealthy();
+    return {
+      success: isHealthy,
+      message: isHealthy
+        ? 'AI service is working'
+        : 'AI service health check failed',
+    };
+  }
+
+  getAIStats(): Record<string, unknown> | null {
+    if (!this.aiService) return null;
+    return this.aiService.getStats();
+  }
+
+  async switchAIProvider(
+    provider: 'ollama' | 'openai' | 'claude' | 'disabled'
+  ): Promise<void> {
+    // Update the config manager with the new provider
+    this.configManager.updateConfig({
+      ai: {
+        ...this.configManager.getAIConfig(),
+        provider: provider as any,
+      },
+    });
+
+    // Reinitialize AI service with new config
+    this.aiService = new AIService();
+  }
+
+  /**
+   * Validate output stream for security
+   */
+  private isValidOutputStream(stream: NodeJS.WritableStream): boolean {
+    if (!stream || typeof stream !== 'object') return false;
+
+    // Check if it has the necessary methods
+    if (typeof stream.write !== 'function') return false;
+
+    // Allow standard streams
+    if (stream === process.stdout || stream === process.stderr) return true;
+
+    // Allow file streams and other writable streams with proper constructor
+    if (stream.constructor && stream.constructor.name) {
+      const validConstructors = [
+        'WriteStream',
+        'Socket',
+        'PassThrough',
+        'Transform',
+        'Object', // Allow test mocks
+      ];
+      return validConstructors.includes(stream.constructor.name);
+    }
+
+    return false;
   }
 }
