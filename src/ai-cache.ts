@@ -49,6 +49,9 @@ export class AICache implements IAICache {
       return null;
     }
 
+    // Update timestamp for LRU eviction (mark as recently used)
+    entry.timestamp = Date.now();
+
     this.cacheStats.hits++;
     return entry.insight;
   }

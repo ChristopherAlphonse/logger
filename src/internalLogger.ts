@@ -2,33 +2,30 @@ import { LogLevel } from './types';
 
 /**
  * Simple internal logger to avoid circular dependencies.
- * Uses console with prefixes for internal logging only.
+ * Uses direct stderr/stdout writes instead of console to maintain consistency.
  */
 class SimpleInternalLogger {
   constructor(private prefix: string) {}
 
   warn(message: string, data?: unknown): void {
-    if (data) {
-      console.warn(`${this.prefix} ${message}`, data);
-    } else {
-      console.warn(`${this.prefix} ${message}`);
-    }
+    const output = data
+      ? `${this.prefix} ${message} ${JSON.stringify(data)}\n`
+      : `${this.prefix} ${message}\n`;
+    process.stderr.write(output);
   }
 
   error(message: string, data?: unknown): void {
-    if (data) {
-      console.error(`${this.prefix} ${message}`, data);
-    } else {
-      console.error(`${this.prefix} ${message}`);
-    }
+    const output = data
+      ? `${this.prefix} ${message} ${JSON.stringify(data)}\n`
+      : `${this.prefix} ${message}\n`;
+    process.stderr.write(output);
   }
 
   info(message: string, data?: unknown): void {
-    if (data) {
-      console.info(`${this.prefix} ${message}`, data);
-    } else {
-      console.info(`${this.prefix} ${message}`);
-    }
+    const output = data
+      ? `${this.prefix} ${message} ${JSON.stringify(data)}\n`
+      : `${this.prefix} ${message}\n`;
+    process.stdout.write(output);
   }
 }
 

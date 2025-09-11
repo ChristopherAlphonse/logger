@@ -1,3 +1,4 @@
+import chalkModule from 'chalk';
 import { LoggerFactory } from './factories';
 import { LogFormatter } from './formatters';
 import {
@@ -12,6 +13,10 @@ import { AIService } from './ai-service';
 import { ConfigManager } from './config-manager';
 import { processConsoleArgs } from './console-utils';
 import { createInternalLogger } from './internalLogger';
+
+const chalk =
+  (chalkModule as typeof chalkModule & { default?: typeof chalkModule })
+    ?.default || chalkModule;
 
 /**
  * A customizable logger class that wraps console output with color support using chalk.
@@ -74,6 +79,10 @@ export class Logger implements ILogger {
 
     // Validate output stream for security
     if (this.config.output && !this.isValidOutputStream(this.config.output)) {
+      const internalLogger = createInternalLogger('[LOGGER]');
+      internalLogger.warn(
+        'Invalid output stream provided in configuration. Falling back to process.stdout. Please check your logger configuration.'
+      );
       this.config.output = process.stdout;
     }
 
@@ -734,22 +743,33 @@ export class Logger implements ILogger {
   private displayAIInsight(insight: AIInsight): void {
     const output = this.config.output?.write || process.stdout.write;
 
-    if (this.config.colors) {
-      output('\nAI Insight:\n');
-      output(`   Explanation: ${insight.explanation}\n`);
-      output(`   Likely Causes: ${insight.likelyCauses.join(', ')}\n`);
-      output(`   Suggested Fix: ${insight.suggestedFix}\n`);
-      if (insight.contextualInsights.length > 0) {
-        output(`   Context: ${insight.contextualInsights.join(', ')}\n`);
-      }
-    } else {
-      output('\nAI Insight:\n');
-      output(`   Explanation: ${insight.explanation}\n`);
-      output(`   Likely Causes: ${insight.likelyCauses.join(', ')}\n`);
-      output(`   Suggested Fix: ${insight.suggestedFix}\n`);
-      if (insight.contextualInsights.length > 0) {
-        output(`   Context: ${insight.contextualInsights.join(', ')}\n`);
-      }
+    // Apply color formatting conditionally
+    const header = this.config.colors
+      ? chalk.cyan('\nAI Insight:\n')
+      : '\nAI Insight:\n';
+    const explanation = this.config.colors
+      ? chalk.blue(`   Explanation: ${insight.explanation}\n`)
+      : `   Explanation: ${insight.explanation}\n`;
+    const likelyCauses = this.config.colors
+      ? chalk.yellow(`   Likely Causes: ${insight.likelyCauses.join(', ')}\n`)
+      : `   Likely Causes: ${insight.likelyCauses.join(', ')}\n`;
+    const suggestedFix = this.config.colors
+      ? chalk.green(`   Suggested Fix: ${insight.suggestedFix}\n`)
+      : `   Suggested Fix: ${insight.suggestedFix}\n`;
+
+    // Output all content once
+    output(header);
+    output(explanation);
+    output(likelyCauses);
+    output(suggestedFix);
+
+    if (insight.contextualInsights.length > 0) {
+      const context = this.config.colors
+        ? chalk.magenta(
+            `   Context: ${insight.contextualInsights.join(', ')}\n`
+          )
+        : `   Context: ${insight.contextualInsights.join(', ')}\n`;
+      output(context);
     }
   }
 

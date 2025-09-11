@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-import { ConfigManager } from '../src/config-manager';
+import { ConfigManager } from './src/config-manager';
 import { EnhancedAIService } from '../src/enhanced-ai-service';
 import { join } from 'path';
 

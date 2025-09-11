@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+import { request } from 'http';
 import type { AIConfig } from './types';
 
 import { createInternalLogger } from './internalLogger';
