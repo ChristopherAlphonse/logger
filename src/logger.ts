@@ -79,7 +79,7 @@ export class Logger implements ILogger {
 
     this.formatter = new LogFormatter();
     this.configManager = ConfigManager.getInstance();
-    
+
     // Update AI configuration if provided
     if (config.ai) {
       this.configManager.updateConfig({
@@ -89,7 +89,7 @@ export class Logger implements ILogger {
         },
       });
     }
-    
+
     this.initializeAI();
   }
 
@@ -219,15 +219,23 @@ export class Logger implements ILogger {
   /**
    * Log with AI translation
    */
-  private async logWithTranslation(level: LogLevel, message: string, data?: LogData): Promise<void> {
+  private async logWithTranslation(
+    level: LogLevel,
+    message: string,
+    data?: LogData
+  ): Promise<void> {
     // First, always log the original message
     this.logDirect(level, message, data);
 
     // Then attempt to get AI translation and display it as additional context
     try {
       if (this.aiService) {
-        const translatedMessage = await this.aiService.translateLog(message, level, data);
-        
+        const translatedMessage = await this.aiService.translateLog(
+          message,
+          level,
+          data
+        );
+
         // Only show translation if it's different from the original
         if (translatedMessage && translatedMessage !== message) {
           this.displayAITranslation(translatedMessage, level);
@@ -236,16 +244,22 @@ export class Logger implements ILogger {
     } catch (error) {
       // Silently fail - original message was already logged
       const internalLogger = createInternalLogger('[LOGGER]');
-      internalLogger.warn('Log translation failed', { error, originalMessage: message });
+      internalLogger.warn('Log translation failed', {
+        error,
+        originalMessage: message,
+      });
     }
   }
 
   /**
    * Display AI translation as additional context
    */
-  private displayAITranslation(translatedMessage: string, level: LogLevel): void {
+  private displayAITranslation(
+    translatedMessage: string,
+    level: LogLevel
+  ): void {
     const prefix = this.config.prefix ? `[${this.config.prefix}] ` : '';
-    
+
     // Simple colored output without accessing formatter internals
     if (this.config.colors) {
       // Use basic ANSI color codes for the translation
@@ -287,11 +301,13 @@ export class Logger implements ILogger {
    */
   private shouldTranslateLog(level: LogLevel): boolean {
     if (!this.aiService) return false;
-    
+
     const aiConfig = this.configManager.getAIConfig();
-    return aiConfig.enabled && 
-           aiConfig.translateLogs && 
-           aiConfig.translateLogLevels.includes(level);
+    return (
+      aiConfig.enabled &&
+      aiConfig.translateLogs &&
+      aiConfig.translateLogLevels.includes(level)
+    );
   }
 
   // Console Compatibility Methods
@@ -610,10 +626,10 @@ export class Logger implements ILogger {
     const lines = stack.split('\n');
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
-      
+
       // Skip internal logger methods and node_modules
       if (
-        line.includes('node_modules') || 
+        line.includes('node_modules') ||
         line.includes('packages/logger') ||
         line.includes('Logger.log') ||
         line.includes('Logger.logDirect') ||
@@ -772,7 +788,7 @@ export class Logger implements ILogger {
         translateLogs: true,
       },
     });
-    
+
     // Ensure AI service is initialized
     this.aiService ??= new AIService();
   }

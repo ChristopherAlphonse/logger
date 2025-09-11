@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
-import { Logger } from './src/logger';
-import { LogLevel } from './src/types';
+import { Logger } from '../src/logger';
+import { LogLevel } from '../src/types';
 
 /**
  * Simple test for Ollama log translation
@@ -42,23 +42,23 @@ async function testTranslation() {
 
   // Test translation
   console.log('Testing log translation:\n');
-  
+
   // This should be translated (ERROR level)
   console.log('1. Testing ERROR level translation:');
   logger.error('Connection timeout after 5000ms to database server');
-  
+
   // Wait for async translation
   console.log('   Waiting for translation...');
   await new Promise(resolve => setTimeout(resolve, 5000));
-  
+
   // This should be translated (WARN level)
   console.log('\n2. Testing WARN level translation:');
   logger.warn('Memory usage exceeded 85% threshold');
-  
+
   // Wait for async translation
   console.log('   Waiting for translation...');
   await new Promise(resolve => setTimeout(resolve, 5000));
-  
+
   // This should NOT be translated (INFO level not in translateLogLevels)
   console.log('\n3. Testing INFO level (should not be translated):');
   logger.info('This info message should appear as-is without translation');

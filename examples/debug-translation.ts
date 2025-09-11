@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
-import { Logger } from './src/logger';
-import { LogLevel } from './src/types';
+import { Logger } from '../src/logger';
+import { LogLevel } from '../src/types';
 
 /**
  * Debug test for AI translation
@@ -66,11 +66,11 @@ async function debugTranslation() {
   console.log('\n4. Testing through logger...');
   console.log('   About to log ERROR message...');
   logger.error('Connection timeout after 5000ms to database server');
-  
+
   // Wait and see what happens
   console.log('   Waiting 10 seconds...');
   await new Promise(resolve => setTimeout(resolve, 10000));
-  
+
   console.log('\nDebug test completed!');
 }
 
