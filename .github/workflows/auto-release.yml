@@ -112,14 +112,94 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-      - name: Commit version bump and changelog
+      - name: Create release branch
         run: |
+          BRANCH_NAME="release/v${{ steps.version.outputs.version }}"
+          git checkout -b $BRANCH_NAME
           git add package.json CHANGELOG.md
-          git commit -m "chore: release v${{ steps.version.outputs.version }} [skip ci]"
-          git push origin main
+          git commit -m "chore: release v${{ steps.version.outputs.version }}"
+          git push origin $BRANCH_NAME
+
+      - name: Create Pull Request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Release v${{ steps.version.outputs.version }}`,
+              head: `release/v${{ steps.version.outputs.version }}`,
+              base: 'main',
+              body: `## Release v${{ steps.version.outputs.version }}
+
+            This is an automated release PR.
+
+            ### Changes
+            - Version bump: ${{ steps.current-version.outputs.version }} → ${{ steps.version.outputs.version }}
+            - Type: ${{ steps.bump-type.outputs.type }}
+            - Updated CHANGELOG.md
+
+            ### Next Steps
+            1. Review the changes
+            2. Merge this PR to trigger npm publish and GitHub release
+            `,
+              draft: false
+            });
+            
+            // Auto-approve the PR since it's automated
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              event: 'APPROVE',
+              body: 'Auto-approved automated release PR'
+            });
+
+      - name: Create success summary
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Type:** ${{ steps.bump-type.outputs.type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release PR:** Created and auto-approved" >> $GITHUB_STEP_SUMMARY
+          echo "- **Next:** Merge the PR to publish to npm" >> $GITHUB_STEP_SUMMARY
+
+  # This job runs when a release PR is merged
+  publish-release:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, 'chore: release v')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build project
+        run: pnpm build
+
+      - name: Get version from package.json
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
       - name: Create Git tag
         run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
           git tag -a v${{ steps.version.outputs.version }} -m "Release v${{ steps.version.outputs.version }}"
           git push origin v${{ steps.version.outputs.version }}
 
@@ -146,15 +226,19 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.version }}
           release_name: Release v${{ steps.version.outputs.version }}
-          body_path: /tmp/changelog_entry.md
+          body: |
+            ## Release v${{ steps.version.outputs.version }}
+            
+            This release was automatically created from the merged release PR.
+            
+            See CHANGELOG.md for detailed changes.
           draft: false
           prerelease: false
 
-      - name: Create success summary
+      - name: Create publish summary
         run: |
-          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Publish Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Version:** v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Type:** ${{ steps.bump-type.outputs.type }}" >> $GITHUB_STEP_SUMMARY
           echo "- **NPM Published:** ${{ steps.npm-check.outputs.exists == 'false' && 'Yes' || 'Already exists' }}" >> $GITHUB_STEP_SUMMARY
           echo "- **GitHub Release:** Created" >> $GITHUB_STEP_SUMMARY
-          echo "- **Changelog:** Updated" >> $GITHUB_STEP_SUMMARY
+          echo "- **Git Tag:** Created" >> $GITHUB_STEP_SUMMARY
