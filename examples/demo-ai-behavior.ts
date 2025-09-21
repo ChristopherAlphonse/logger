@@ -4,8 +4,11 @@ import { Logger } from '../src/logger';
 import { LogLevel } from '../src/types';
 
 /**
- * Demo showing expected behavior with AI translation
- * This shows what the output would look like when Ollama is properly set up
+ * Print a simulated demonstration of how logs would appear when Ollama-based AI translations are enabled.
+ *
+ * This asynchronous demo prints pairs of original technical log lines and their expected AI-generated
+ * translations (for ERROR and WARN levels), plus an example INFO log that is not translated.
+ * It does not call any AI service or perform real translations — it only writes example output to the console.
  */
 
 async function demoExpectedBehavior() {
@@ -55,7 +58,16 @@ async function demoExpectedBehavior() {
   console.log('4. Run test: pnpm run test-translation');
 }
 
-// Test current status
+/**
+ * Checks the configured AI (Ollama) service health and demonstrates logging behavior based on its availability.
+ *
+ * Instantiates a Logger configured to request AI log translations, queries the AI health endpoint, prints the health status
+ * to the console, and then either:
+ * - If healthy: emits an ERROR-level log to exercise the translation path and waits ~5 seconds for the asynchronous translation to complete.
+ * - If not healthy: prints a fallback message and emits original ERROR and WARN logs (no translation).
+ *
+ * @returns A promise that resolves once the health check and the subsequent demo logs (including the ~5s wait when healthy) complete.
+ */
 async function testCurrentStatus() {
   console.log('\n Testing Current Status:\n');
 

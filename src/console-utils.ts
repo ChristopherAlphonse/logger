@@ -1,3 +1,14 @@
+/**
+ * Converts an arbitrary list of console-style arguments into a single message string and optional data payload.
+ *
+ * If `args` is empty returns `{ message: '' }`. If the first argument is a string containing printf-style
+ * format specifiers (`%s`, `%d`, `%i`, `%o`, `%O`, `%c`, `%f`) the function delegates to `formatString`
+ * using the remaining arguments as format values and trailing data. Otherwise it:
+ * - concatenates stringified arguments (objects are serialized via `serializeForConsole`) separated by spaces to form `message`,
+ * - collects any non-null objects into `data` (a single object if one was passed, or an array if multiple).
+ *
+ * @returns An object with `message` (always present) and optional `data` containing object argument(s) or remaining format arguments.
+ */
 export function processConsoleArgs(args: unknown[]): {
   message: string;
   data?: unknown;
@@ -33,10 +44,36 @@ export function processConsoleArgs(args: unknown[]): {
   return { message, data };
 }
 
+/**
+ * Returns true if the given string contains any printf-style format specifiers.
+ *
+ * Detects any of: `%s`, `%d`, `%i`, `%o`, `%O`, `%c`, `%f`.
+ *
+ * @param str - The string to scan for format specifiers
+ * @returns `true` when at least one specifier is present, otherwise `false`
+ */
 export function hasFormatSpecifiers(str: string): boolean {
   return /%[sdioOcf]/.test(str);
 }
 
+/**
+ * Formats a printf-style string using the provided arguments and returns the formatted message plus any unused arguments as data.
+ *
+ * Replaces format specifiers in `format` with values from `args` in order:
+ * - `%s` — String coercion
+ * - `%d` — Number coercion (defaults to `0`) then string
+ * - `%i` — Number coercion, floored (defaults to `0`) then string
+ * - `%o` — Object serialization via `serializeForConsole`
+ * - `%O` — `JSON.stringify` with 2-space indentation
+ * - `%c` — String coercion
+ * - `%f` — Number coercion (defaults to `0`) then string
+ *
+ * If there are fewer arguments than specifiers, unmatched placeholders are left unchanged. Any arguments remaining after filling specifiers are returned as `data` (single value when one remains, otherwise an array).
+ *
+ * @param format - The format string containing zero or more specifiers
+ * @param args - Values to substitute into the format string; any unused values become the returned `data`
+ * @returns An object with the formatted `message` and optional `data` containing unused arguments
+ */
 export function formatString(
   format: string,
   ...args: unknown[]
@@ -80,6 +117,18 @@ export function formatString(
   return { message, data };
 }
 
+/**
+ * Serializes an arbitrary value to a concise string suitable for console output.
+ *
+ * For null/undefined returns the literal `"null"`/`"undefined"`. For objects:
+ * - If the object defines a custom `toString()` (i.e., not `Object.prototype.toString`), that value is returned.
+ * - Otherwise the object is JSON-stringified; strings longer than 100 characters are truncated to 97 characters plus `...`.
+ * - If stringification throws, returns `"[Object]"`.
+ * For non-objects returns `String(obj)`.
+ *
+ * @param obj - The value to serialize for console display.
+ * @returns A short, human-readable string representation of `obj`.
+ */
 export function serializeForConsole(obj: unknown): string {
   if (obj === null) return 'null';
   if (obj === undefined) return 'undefined';
