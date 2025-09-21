@@ -12,7 +12,7 @@ This directory contains the CI/CD workflows for the logger project.
 ### `auto-release.yml`
 - **Trigger**: Push to main branch
 - **Purpose**: Automatically handles releases when code is merged to main
-- **Permissions**: Requires `contents: write`, `packages: write`, `pull-requests: write`
+- **Permissions**: ✅ Configured with `contents: write`, `packages: write`, `pull-requests: write`
 - **Features**:
   - Determines version bump type from commit messages
   - Updates package.json version
@@ -52,7 +52,16 @@ To use the auto-release workflow, ensure:
 
 ## Troubleshooting
 
-If you get a 403 error when pushing:
-- Check that workflow permissions are set correctly
+**Fixed: 403 Permission Error** 🛠️
+The workflow now includes proper permissions configuration to prevent the previous 403 error:
+```yaml
+permissions:
+  contents: write
+  packages: write  
+  pull-requests: write
+```
+
+If you still get a 403 error when pushing:
+- Check that workflow permissions are set correctly in repository settings
 - Ensure the repository allows Actions to write to the repository
 - Verify that the GITHUB_TOKEN has the necessary permissions
