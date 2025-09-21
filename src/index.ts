@@ -1,14 +1,16 @@
-export { Logger } from './logger';
-export { LogLevel } from './types';
-export type { LoggerConfig, LogEntry, ILogger, LogData } from './types';
+export * from './constants';
 export { LoggerFactory } from './factories';
 export { LogFormatter } from './formatters';
-export * from './constants';
+export { Logger } from './logger';
+export { LogLevel } from './types';
+export type { ILogger, LogData, LogEntry, LoggerConfig } from './types';
+export { configureLogger, createChildLogger, createLogger, log, setLogLevel };
+
+import type { LogData, LoggerConfig } from './types';
 
 import { LoggerFactory } from './factories';
 import { Logger } from './logger';
 import { LogLevel } from './types';
-import type { LogData, LoggerConfig } from './types';
 
 const defaultLogger = new Logger();
 
@@ -43,6 +45,18 @@ const mainLogger = {
   getConfig: defaultLogger.getConfig.bind(defaultLogger),
   child: defaultLogger.child.bind(defaultLogger),
   isEnabled: defaultLogger.isEnabled.bind(defaultLogger),
+  table: defaultLogger.table.bind(defaultLogger),
+
+  analyzeError: defaultLogger.analyzeError.bind(defaultLogger),
+  getInsight: defaultLogger.getInsight.bind(defaultLogger),
+  enableAI: defaultLogger.enableAI.bind(defaultLogger),
+  disableAI: defaultLogger.disableAI.bind(defaultLogger),
+  enableLogTranslation: defaultLogger.enableLogTranslation.bind(defaultLogger),
+  disableLogTranslation: defaultLogger.disableLogTranslation.bind(defaultLogger),
+  isAIHealthy: defaultLogger.isAIHealthy.bind(defaultLogger),
+  testAI: defaultLogger.testAI.bind(defaultLogger),
+  getAIStats: defaultLogger.getAIStats.bind(defaultLogger),
+  switchAIProvider: defaultLogger.switchAIProvider.bind(defaultLogger),
 
   log: log,
   createLogger,
@@ -52,16 +66,13 @@ const mainLogger = {
   LogLevel,
   Logger,
 
-  // Factory methods for backward compatibility
   createJsonLogger: LoggerFactory.createJsonLogger,
   createMinimalLogger: LoggerFactory.createMinimalLogger,
   createVerboseLogger: LoggerFactory.createVerboseLogger,
 
-  // Export factory class
   LoggerFactory,
 };
 
 export const logger = mainLogger;
-export { log, createLogger, createChildLogger, setLogLevel, configureLogger };
 
 export default mainLogger;

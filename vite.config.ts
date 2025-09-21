@@ -5,7 +5,7 @@ import dts from 'vite-plugin-dts';
 export default defineConfig({
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: resolve(__dirname, 'dist/index.js'),
       name: 'Logger',
       fileName: (format) => (format === 'es' ? 'index.es.js' : 'index.cjs'),
       formats: ['es', 'cjs'],
@@ -15,6 +15,7 @@ export default defineConfig({
         'chalk',
         'ollama',
         'openai',
+        'crypto-js',
         'crypto',
         'fs',
         'path',
@@ -29,12 +30,13 @@ export default defineConfig({
           chalk: 'chalk',
           ollama: 'ollama',
           openai: 'openai',
+          'crypto-js': 'CryptoJS',
           crypto: 'crypto',
           fs: 'fs',
           path: 'path',
           os: 'os',
         },
-        exports: 'auto',
+        exports: 'named',
       },
     },
     sourcemap: true,

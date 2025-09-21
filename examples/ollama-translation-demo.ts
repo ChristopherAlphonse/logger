@@ -3,25 +3,9 @@
 import { Logger } from '../src/logger';
 import { LogLevel } from '../src/types';
 
-/**
- * Runs a demo that showcases Ollama-powered translation of technical log messages into human-readable explanations.
- *
- * The function configures a Logger with AI translation settings (using Ollama), checks the AI service health,
- * enables or disables log translation accordingly, and emits several example logs (errors, warnings, info, debug)
- * to demonstrate translated vs. standard output.
- *
- * Prerequisites:
- * 1. Install Ollama: https://ollama.ai
- * 2. Pull the model: `ollama pull llama3.2:3b`
- * 3. Start the service: `ollama serve`
- *
- * @returns A promise that resolves when the demo has finished emitting example logs and reporting AI translation stats.
- */
-
 async function main() {
-  console.log('🤖 Ollama Log Translation Demo\n');
+  console.log('Ollama Log Translation Demo\n');
 
-  // Create logger with AI translation enabled
   const logger = new Logger({
     level: LogLevel.DEBUG,
     colors: true,

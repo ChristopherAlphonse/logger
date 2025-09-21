@@ -361,32 +361,43 @@ export class ConfigManager {
     const dangerousKeys = ['__proto__', 'constructor', 'prototype'];
     if (this.hasDangerousKeys(configObj, dangerousKeys)) return false;
 
-    if (configObj.ai && typeof configObj.ai === 'object' && configObj.ai !== null) {
-      const aiConfig = configObj.ai as Record<string, unknown>;
-      const { provider } = aiConfig;
-      const validProviders = ['ollama', 'openai', 'claude', 'disabled'];
-      if (provider && !validProviders.includes(String(provider))) return false;
+    return this.isValidAIConfig(configObj);
+  }
 
-      if (
-        aiConfig.timeout &&
-        (typeof aiConfig.timeout !== 'number' ||
-          aiConfig.timeout < 0 ||
-          aiConfig.timeout > VALIDATION_CONSTANTS.MAX_TIMEOUT)
-      ) {
-        return false;
-      }
-
-      if (
-        aiConfig.confidenceThreshold !== undefined &&
-        (typeof aiConfig.confidenceThreshold !== 'number' ||
-          aiConfig.confidenceThreshold < 0 ||
-          aiConfig.confidenceThreshold > 3)
-      ) {
-        return false;
-      }
+  private isValidAIConfig(configObj: Record<string, unknown>): boolean {
+    if (!configObj.ai || typeof configObj.ai !== 'object' || configObj.ai === null) {
+      return true; // AI config is optional
     }
 
+    const aiConfig = configObj.ai as Record<string, unknown>;
+
+    if (!this.isValidProvider(aiConfig.provider)) return false;
+    if (!this.isValidTimeout(aiConfig.timeout)) return false;
+    if (!this.isValidConfidenceThreshold(aiConfig.confidenceThreshold)) return false;
+
     return true;
+  }
+
+  private isValidProvider(provider: unknown): boolean {
+    if (!provider) return true; // Provider is optional
+    const validProviders = ['ollama', 'openai', 'claude', 'disabled'];
+    return validProviders.includes(String(provider));
+  }
+
+  private isValidTimeout(timeout: unknown): boolean {
+    if (timeout === undefined) return true; // Timeout is optional
+    return (
+      typeof timeout === 'number' && timeout >= 0 && timeout <= VALIDATION_CONSTANTS.MAX_TIMEOUT
+    );
+  }
+
+  private isValidConfidenceThreshold(confidenceThreshold: unknown): boolean {
+    if (confidenceThreshold === undefined) return true; // Confidence threshold is optional
+    return (
+      typeof confidenceThreshold === 'number' &&
+      confidenceThreshold >= 0 &&
+      confidenceThreshold <= 3
+    );
   }
 
   private hasDangerousKeys(obj: Record<string, unknown>, dangerousKeys: string[]): boolean {

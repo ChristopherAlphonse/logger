@@ -4,15 +4,15 @@ on:
   push:
     branches: [main]
 
-permissions:
-  contents: write
-  packages: write
-  pull-requests: write
-
 jobs:
   auto-release:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      !contains(github.event.head_commit.message, '[skip ci]')
+    concurrency:
+      group: auto-release
+      cancel-in-progress: false
 
     steps:
       - name: Checkout code
@@ -62,6 +62,7 @@ jobs:
       - name: Determine version bump type
         id: bump-type
         run: |
+          # Get the latest commit message to determine bump type
           COMMIT_MSG=$(git log -1 --pretty=%B)
 
           if echo "$COMMIT_MSG" | grep -qE "\[major\]|BREAKING CHANGE"; then
@@ -86,6 +87,7 @@ jobs:
           VERSION=${{ steps.version.outputs.version }}
           DATE=$(date +%Y-%m-%d)
 
+          # Get commit messages since last tag
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           if [ -n "$LAST_TAG" ]; then
             COMMITS=$(git log $LAST_TAG..HEAD --oneline --pretty=format:"- %s")
@@ -93,18 +95,21 @@ jobs:
             COMMITS=$(git log --oneline --pretty=format:"- %s" | head -10)
           fi
 
-          cat > /tmp/changelog_entry.md << EOF
-          ## [$VERSION] - $DATE
+          # Create minimal changelog entry
+          CHANGELOG_ENTRY="## [$VERSION] - $DATE
 
           ### Changes
           $COMMITS
-          EOF
+          "
 
+          # Save to file for later use
+          echo "$CHANGELOG_ENTRY" > /tmp/changelog_entry.md
+
+          # Update CHANGELOG.md
           if [ -f CHANGELOG.md ]; then
-            cat /tmp/changelog_entry.md CHANGELOG.md > /tmp/new_changelog.md
-            mv /tmp/new_changelog.md CHANGELOG.md
+            echo -e "$CHANGELOG_ENTRY\n$(cat CHANGELOG.md)" > CHANGELOG.md
           else
-            cp /tmp/changelog_entry.md CHANGELOG.md
+            echo "$CHANGELOG_ENTRY" > CHANGELOG.md
           fi
 
       - name: Configure Git
@@ -112,96 +117,25 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-      - name: Create release branch
+      - name: Commit version bump and changelog
         run: |
-          BRANCH_NAME="release/v${{ steps.version.outputs.version }}"
-          git checkout -b $BRANCH_NAME
+          # Fetch latest changes from origin
+          git fetch origin
+
+          # Rebase onto latest main to ensure fast-forward push
+          git rebase origin/main
+
+          # Add changes and commit
           git add package.json CHANGELOG.md
-          git commit -m "chore: release v${{ steps.version.outputs.version }}"
-          git push origin $BRANCH_NAME
+          git commit -m "chore: release v${{ steps.version.outputs.version }} [skip ci]"
 
-      - name: Create Pull Request
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { data: pr } = await github.rest.pulls.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `Release v${{ steps.version.outputs.version }}`,
-              head: `release/v${{ steps.version.outputs.version }}`,
-              base: 'main',
-              body: `## Release v${{ steps.version.outputs.version }}
-
-            This is an automated release PR.
-
-            ### Changes
-            - Version bump: ${{ steps.current-version.outputs.version }} → ${{ steps.version.outputs.version }}
-            - Type: ${{ steps.bump-type.outputs.type }}
-            - Updated CHANGELOG.md
-
-            ### Next Steps
-            1. Review the changes
-            2. Merge this PR to trigger npm publish and GitHub release
-            `,
-              draft: false
-            });
-
-            // Auto-approve the PR since it's automated
-            await github.rest.pulls.createReview({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: pr.number,
-              event: 'APPROVE',
-              body: 'Auto-approved automated release PR'
-            });
-
-      - name: Create success summary
-        run: |
-          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version:** v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Type:** ${{ steps.bump-type.outputs.type }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Release PR:** Created and auto-approved" >> $GITHUB_STEP_SUMMARY
-          echo "- **Next:** Merge the PR to publish to npm" >> $GITHUB_STEP_SUMMARY
-
-  # This job runs when a release PR is merged
-  publish-release:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, 'chore: release v')
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 8.15.0
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build project
-        run: pnpm build
-
-      - name: Get version from package.json
-        id: version
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+          # Push with lease protection to avoid overwriting concurrent changes
+          git push --force-with-lease origin main
 
       - name: Create Git tag
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
           git tag -a v${{ steps.version.outputs.version }} -m "Release v${{ steps.version.outputs.version }}"
-          git push origin v${{ steps.version.outputs.version }}
+          git push --force-with-lease origin v${{ steps.version.outputs.version }}
 
       - name: Check if version exists on npm
         id: npm-check
@@ -226,19 +160,15 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.version }}
           release_name: Release v${{ steps.version.outputs.version }}
-          body: |
-            ## Release v${{ steps.version.outputs.version }}
-
-            This release was automatically created from the merged release PR.
-
-            See CHANGELOG.md for detailed changes.
+          body_path: /tmp/changelog_entry.md
           draft: false
           prerelease: false
 
-      - name: Create publish summary
+      - name: Create success summary
         run: |
-          echo "## Publish Summary" >> $GITHUB_STEP_SUMMARY
+          echo "##  Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Version:** v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **NPM Published:** ${{ steps.npm-check.outputs.exists == 'false' && 'Yes' || 'Already exists' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **GitHub Release:** Created" >> $GITHUB_STEP_SUMMARY
-          echo "- **Git Tag:** Created" >> $GITHUB_STEP_SUMMARY
+          echo "- **Type:** ${{ steps.bump-type.outputs.type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **NPM Published:** ${{ steps.npm-check.outputs.exists == 'false' && ' Yes' || ' Already exists' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **GitHub Release:**  Created" >> $GITHUB_STEP_SUMMARY
+          echo "- **Changelog:**  Updated" >> $GITHUB_STEP_SUMMARY
