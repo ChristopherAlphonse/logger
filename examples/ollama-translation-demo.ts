@@ -27,9 +27,7 @@ async function main() {
 
   // Check if AI service is available
   const isAIHealthy = await logger.isAIHealthy();
-  console.log(
-    `🔍 AI Service Status: ${isAIHealthy ? '✅ Available' : '❌ Unavailable'}`
-  );
+  console.log(`🔍 AI Service Status: ${isAIHealthy ? '✅ Available' : '❌ Unavailable'}`);
 
   if (!isAIHealthy) {
     console.log('\n📋 To enable Ollama translation:');
@@ -50,9 +48,7 @@ async function main() {
 
   // Example 1: Database connection error
   console.log('\n📊 Example 1: Database Connection Error');
-  logger.error(
-    'Connection timeout after 5000ms to database server mysql://localhost:3306/myapp'
-  );
+  logger.error('Connection timeout after 5000ms to database server mysql://localhost:3306/myapp');
 
   // Wait a moment for translation to complete
   await sleep(2000);
@@ -91,12 +87,9 @@ async function main() {
 
   // Example 6: Debug message (should not be translated by default)
   console.log('\n📊 Example 6: Debug Message (not translated)');
-  logger.debug(
-    'Executing SQL query: SELECT * FROM users WHERE last_login > ?',
-    {
-      params: ['2025-08-01'],
-    }
-  );
+  logger.debug('Executing SQL query: SELECT * FROM users WHERE last_login > ?', {
+    params: ['2025-08-01'],
+  });
 
   console.log(`\n${'='.repeat(50)}`);
   console.log(
@@ -122,11 +115,11 @@ async function main() {
  * @returns A promise that resolves once the delay has elapsed.
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // Handle errors gracefully
-main().catch(error => {
+main().catch((error) => {
   console.error('❌ Demo failed:', error);
   process.exit(1);
 });

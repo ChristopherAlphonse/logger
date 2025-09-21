@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-import { Logger, LogLevel } from '../src/index';
+import { LogLevel, Logger } from '../src/index';
 
 const logger = new Logger({ level: LogLevel.INFO, colors: true });
 

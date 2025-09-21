@@ -38,5 +38,4 @@ class SimpleInternalLogger {
   }
 }
 
-export const createInternalLogger = (prefix = '[INTERNAL]') =>
-  new SimpleInternalLogger(prefix);
+export const createInternalLogger = (prefix = '[INTERNAL]') => new SimpleInternalLogger(prefix);
