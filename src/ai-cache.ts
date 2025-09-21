@@ -1,24 +1,7 @@
 import type { AIInsight, IAICache } from './types';
 import CryptoJS from 'crypto-js';
+import { TIME_CONSTANTS, CACHE_CONSTANTS } from './constants';
 
-function createHash(algorithm: string) {
-  if (algorithm !== 'md5') {
-    throw new Error(`Unsupported hash algorithm: ${algorithm}`);
-  }
-
-  return {
-    update(data: string) {
-      return {
-        digest(encoding: string) {
-          if (encoding !== 'hex') {
-            throw new Error(`Unsupported encoding: ${encoding}`);
-          }
-          return CryptoJS.MD5(data).toString();
-        },
-      };
-    },
-  };
-}
 
 interface CacheEntry {
   insight: AIInsight;
@@ -46,7 +29,7 @@ export class AICache implements IAICache {
   private maxSize: number;
   private defaultTTL: number;
 
-  constructor(maxSize = 1000, defaultTTL = 60 * 60 * 1000) {
+  constructor(maxSize = CACHE_CONSTANTS.DEFAULT_MAX_SIZE, defaultTTL = CACHE_CONSTANTS.DEFAULT_TTL) {
     this.maxSize = maxSize;
     this.defaultTTL = defaultTTL;
   }
@@ -148,7 +131,7 @@ export class AICache implements IAICache {
       stack: error.stack,
       context,
     };
-    return createHash('md5').update(JSON.stringify(data)).digest('hex');
+    return CryptoJS.MD5(JSON.stringify(data)).toString();
   }
 
   static generateStackTraceKey(
@@ -163,11 +146,11 @@ export class AICache implements IAICache {
       frames: stackFrames,
       context,
     };
-    return createHash('md5').update(JSON.stringify(data)).digest('hex');
+    return CryptoJS.MD5(JSON.stringify(data)).toString();
   }
 
   static generateCustomKey(data: string): string {
-    return createHash('md5').update(data).digest('hex');
+    return CryptoJS.MD5(data).toString();
   }
 
   async preloadCommonPatterns(): Promise<void> {
@@ -190,7 +173,7 @@ export class AICache implements IAICache {
         processingTime: 0,
         cached: true,
       };
-      await this.set(key, mockInsight, 24 * 60 * 60 * 1000);
+      await this.set(key, mockInsight, TIME_CONSTANTS.ONE_DAY);
     }
   }
 
@@ -198,9 +181,7 @@ export class AICache implements IAICache {
     errorType: string,
     messagePattern: string
   ): string {
-    return createHash('md5')
-      .update(`${errorType}:${messagePattern}`)
-      .digest('hex');
+    return CryptoJS.MD5(`${errorType}:${messagePattern}`).toString();
   }
 
   getEfficiencyMetrics(): {
@@ -232,14 +213,14 @@ export class AICache implements IAICache {
   optimize(): void {
     this.cleanup();
 
-    if (this.cacheStats.size < this.maxSize * 0.3) {
-      this.maxSize = Math.max(100, Math.floor(this.maxSize * 0.8));
+    if (this.cacheStats.size < this.maxSize * CACHE_CONSTANTS.LOW_UTILIZATION_THRESHOLD) {
+      this.maxSize = Math.max(CACHE_CONSTANTS.MIN_CACHE_SIZE, Math.floor(this.maxSize * CACHE_CONSTANTS.CACHE_SHRINK_FACTOR));
     }
 
     const evictionRate =
       this.cacheStats.evictions / Math.max(1, this.cacheStats.totalRequests);
-    if (evictionRate > 0.1) {
-      this.maxSize = Math.min(10000, Math.floor(this.maxSize * 1.2));
+    if (evictionRate > CACHE_CONSTANTS.HIGH_EVICTION_THRESHOLD) {
+      this.maxSize = Math.min(CACHE_CONSTANTS.MAX_CACHE_SIZE, Math.floor(this.maxSize * CACHE_CONSTANTS.CACHE_GROW_FACTOR));
     }
   }
 }

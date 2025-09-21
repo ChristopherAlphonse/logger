@@ -104,7 +104,6 @@ export function formatString(
  * Process console arguments with format string support
  * @deprecated Use processConsoleArgs() instead - format string support is now built-in
  */
-export const processConsoleArgsWithFormatting = processConsoleArgs;
 
 /**
  * Serialize an object for console-like display

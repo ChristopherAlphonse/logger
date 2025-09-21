@@ -1,3 +1,12 @@
+import {
+  AI_CONSTANTS,
+  CACHE_CONSTANTS,
+  NETWORK_CONSTANTS,
+  RATE_LIMIT_CONSTANTS,
+  TIME_CONSTANTS,
+  VALIDATION_CONSTANTS,
+} from './constants';
+
 import type { AIConfig } from './types';
 import { createInternalLogger } from './internalLogger';
 
@@ -116,39 +125,40 @@ const DEFAULT_CONFIG: LoggerAIConfig = {
     provider: 'ollama',
     apiKey: '',
     caching: true,
-    confidenceThreshold: 1,
-    maxInsightLength: 500,
-    timeout: 10000,
+    confidenceThreshold: AI_CONSTANTS.DEFAULT_CONFIDENCE_THRESHOLD,
+    maxInsightLength: AI_CONSTANTS.DEFAULT_MAX_INSIGHT_LENGTH,
+    timeout: TIME_CONSTANTS.TEN_SECONDS,
     translateLogs: false,
     translateLogLevels: [0, 1],
     ollama: {
-      baseUrl: 'http://localhost:11434',
-      model: 'llama3.2:3b',
-      temperature: 0.7,
-      maxTokens: 1000,
+      baseUrl: NETWORK_CONSTANTS.OLLAMA_DEFAULT_BASE_URL,
+      model: AI_CONSTANTS.OLLAMA_DEFAULT_MODEL,
+      temperature: AI_CONSTANTS.DEFAULT_TEMPERATURE,
+      maxTokens: AI_CONSTANTS.DEFAULT_MAX_TOKENS,
     },
     openai: {
-      model: 'gpt-3.5-turbo',
-      temperature: 0.7,
-      maxTokens: 1000,
+      model: AI_CONSTANTS.OPENAI_DEFAULT_MODEL,
+      temperature: AI_CONSTANTS.DEFAULT_TEMPERATURE,
+      maxTokens: AI_CONSTANTS.DEFAULT_MAX_TOKENS,
     },
     claude: {
-      model: 'claude-3-haiku-20240307',
-      temperature: 0.7,
-      maxTokens: 1000,
+      model: AI_CONSTANTS.CLAUDE_DEFAULT_MODEL,
+      temperature: AI_CONSTANTS.DEFAULT_TEMPERATURE,
+      maxTokens: AI_CONSTANTS.DEFAULT_MAX_TOKENS,
     },
     prompts: {
       logTranslation: undefined,
     },
     rateLimit: {
-      maxRequestsPerMinute: 60,
-      maxRequestsPerHour: 1000,
+      maxRequestsPerMinute:
+        RATE_LIMIT_CONSTANTS.DEFAULT_MAX_REQUESTS_PER_MINUTE,
+      maxRequestsPerHour: RATE_LIMIT_CONSTANTS.DEFAULT_MAX_REQUESTS_PER_HOUR,
     },
   },
   cache: {
     enabled: true,
-    maxSize: 1000,
-    ttl: 60 * 60 * 1000,
+    maxSize: CACHE_CONSTANTS.DEFAULT_MAX_SIZE,
+    ttl: CACHE_CONSTANTS.DEFAULT_TTL,
     persistToDisk: false,
   },
 };
@@ -184,7 +194,7 @@ export class ConfigManager {
       if (fs.existsSync(this.configPath)) {
         const fileContent = fs.readFileSync(this.configPath, 'utf-8');
 
-        if (fileContent.length > 100000) {
+        if (fileContent.length > VALIDATION_CONSTANTS.MAX_CONFIG_FILE_SIZE) {
           internalLogger.warn('Config file too large, using defaults', {
             configPath: this.configPath,
           });
@@ -265,43 +275,19 @@ export class ConfigManager {
   }
 
   static createSampleConfig(filePath?: string): void {
+    // Create sample config based on defaults with API key placeholders
     const sampleConfig = {
+      ...DEFAULT_CONFIG,
       ai: {
-        enabled: true,
-        provider: 'ollama',
-        apiKey: '',
-        caching: true,
-        confidenceThreshold: 1,
-        maxInsightLength: 500,
-        timeout: 10000,
-        ollama: {
-          baseUrl: 'http://localhost:11434',
-          model: 'llama3.2:3b',
-          temperature: 0.7,
-          maxTokens: 1000,
-        },
+        ...DEFAULT_CONFIG.ai,
         openai: {
+          ...DEFAULT_CONFIG.ai.openai,
           apiKey: 'your-openai-api-key-here',
-          model: 'gpt-3.5-turbo',
-          temperature: 0.7,
-          maxTokens: 1000,
         },
         claude: {
+          ...DEFAULT_CONFIG.ai.claude,
           apiKey: 'your-claude-api-key-here',
-          model: 'claude-3-haiku-20240307',
-          temperature: 0.7,
-          maxTokens: 1000,
         },
-        rateLimit: {
-          maxRequestsPerMinute: 60,
-          maxRequestsPerHour: 1000,
-        },
-      },
-      cache: {
-        enabled: true,
-        maxSize: 1000,
-        ttl: 60 * 60 * 1000,
-        persistToDisk: false,
       },
     };
 
@@ -312,7 +298,7 @@ export class ConfigManager {
     try {
       const configData = JSON.stringify(sampleConfig, null, 2);
       fs.writeFileSync(targetPath, configData, 'utf-8');
-      internalLogger.info(`Sample AI logger config created at: ${targetPath}`);
+
       internalLogger.info('\nGetting started with FREE AI logging:');
       internalLogger.info('1. Install Ollama: https://ollama.ai');
       internalLogger.info('2. Pull a model: ollama pull llama3.2:3b');
@@ -332,7 +318,7 @@ export class ConfigManager {
     const config = this.getAIConfig();
     switch (provider) {
       case 'ollama':
-        return true; // Ollama is always available locally
+        return true;
       case 'openai':
         return !!config.openai?.apiKey;
       case 'claude':
@@ -384,7 +370,6 @@ export class ConfigManager {
     const dangerousKeys = ['__proto__', 'constructor', 'prototype'];
     if (this.hasDangerousKeys(configObj, dangerousKeys)) return false;
 
-    // Validate AI config if present
     if (
       configObj.ai &&
       typeof configObj.ai === 'object' &&
@@ -395,17 +380,15 @@ export class ConfigManager {
       const validProviders = ['ollama', 'openai', 'claude', 'disabled'];
       if (provider && !validProviders.includes(String(provider))) return false;
 
-      // Validate timeout values
       if (
         aiConfig.timeout &&
         (typeof aiConfig.timeout !== 'number' ||
           aiConfig.timeout < 0 ||
-          aiConfig.timeout > 300000)
+          aiConfig.timeout > VALIDATION_CONSTANTS.MAX_TIMEOUT)
       ) {
         return false;
       }
 
-      // Validate confidence threshold
       if (
         aiConfig.confidenceThreshold !== undefined &&
         (typeof aiConfig.confidenceThreshold !== 'number' ||

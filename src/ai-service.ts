@@ -5,6 +5,7 @@ import type {
   StackFrame,
 } from './types';
 import { ConfidenceLevel, LogLevel } from './types';
+import { TIME_CONSTANTS, AI_CONSTANTS, RATE_LIMIT_CONSTANTS, NETWORK_CONSTANTS } from './constants';
 
 import { AICache } from './ai-cache';
 import { ConfigManager } from './config-manager';
@@ -59,7 +60,7 @@ export class AIService implements IAIService {
       case 'ollama':
         if (Ollama) {
           this.ollama = new Ollama({
-            host: config.ollama?.baseUrl || 'http://localhost:11434',
+            host: config.ollama?.baseUrl || NETWORK_CONSTANTS.OLLAMA_DEFAULT_BASE_URL,
           });
         } else {
           internalLogger.warn('Ollama not available - AI features disabled');
@@ -247,11 +248,11 @@ export class AIService implements IAIService {
     const prompt = this.buildErrorAnalysisPrompt(error, framework, context);
 
     const response = await this.ollama.generate({
-      model: config.ollama?.model || 'llama3.2:3b',
+      model: config.ollama?.model || AI_CONSTANTS.OLLAMA_DEFAULT_MODEL,
       prompt,
       options: {
-        temperature: config.ollama?.temperature || 0.7,
-        num_predict: config.ollama?.maxTokens || 1000,
+        temperature: config.ollama?.temperature || AI_CONSTANTS.DEFAULT_TEMPERATURE,
+        num_predict: config.ollama?.maxTokens || AI_CONSTANTS.DEFAULT_MAX_TOKENS,
       },
     });
 
@@ -272,13 +273,13 @@ export class AIService implements IAIService {
 
     const response = await this.openai.chat.completions.create(
       {
-        model: config.openai?.model || 'gpt-3.5-turbo',
+        model: config.openai?.model || AI_CONSTANTS.OPENAI_DEFAULT_MODEL,
         messages: [
           { role: 'system', content: this.getSystemPrompt() },
           { role: 'user', content: prompt },
         ],
-        temperature: config.openai?.temperature || 0.7,
-        max_tokens: config.openai?.maxTokens || 1000,
+        temperature: config.openai?.temperature || AI_CONSTANTS.DEFAULT_TEMPERATURE,
+        max_tokens: config.openai?.maxTokens || AI_CONSTANTS.DEFAULT_MAX_TOKENS,
       },
       { timeout: config.timeout }
     );
@@ -492,8 +493,8 @@ Provide analysis in JSON format.`;
   private checkRateLimit(): boolean {
     const config = this.configManager.getAIConfig();
     const now = Date.now();
-    const oneMinuteAgo = now - 60 * 1000;
-    const oneHourAgo = now - 60 * 60 * 1000;
+    const oneMinuteAgo = now - TIME_CONSTANTS.ONE_MINUTE;
+    const oneHourAgo = now - TIME_CONSTANTS.ONE_HOUR;
 
     // Clean old requests
     this.requestTimes = this.requestTimes.filter(time => time > oneHourAgo);
@@ -504,8 +505,8 @@ Provide analysis in JSON format.`;
     const hourlyRequests = this.requestTimes.length;
 
     return (
-      recentRequests < (config.rateLimit?.maxRequestsPerMinute || 60) &&
-      hourlyRequests < (config.rateLimit?.maxRequestsPerHour || 1000)
+      recentRequests < (config.rateLimit?.maxRequestsPerMinute || RATE_LIMIT_CONSTANTS.DEFAULT_MAX_REQUESTS_PER_MINUTE) &&
+      hourlyRequests < (config.rateLimit?.maxRequestsPerHour || RATE_LIMIT_CONSTANTS.DEFAULT_MAX_REQUESTS_PER_HOUR)
     );
   }
 
@@ -522,7 +523,7 @@ Provide analysis in JSON format.`;
   } {
     const config = this.configManager.getAIConfig();
     const recentRequests = this.requestTimes.filter(
-      time => time > Date.now() - 60 * 1000
+      time => time > Date.now() - TIME_CONSTANTS.ONE_MINUTE
     ).length;
 
     return {
