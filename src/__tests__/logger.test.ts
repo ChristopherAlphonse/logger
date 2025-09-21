@@ -198,7 +198,9 @@ describe('Logger', () => {
         level: LogLevel.INFO,
       });
 
-      expect(() => testLogger.info('Test message', { key: 'value' })).not.toThrow();
+      expect(() =>
+        testLogger.info('Test message', { key: 'value' })
+      ).not.toThrow();
     });
 
     test('should handle JSON output with complex data', () => {
@@ -219,7 +221,9 @@ describe('Logger', () => {
         date: new Date(),
       };
 
-      expect(() => testLogger.info('Complex data test', complexData)).not.toThrow();
+      expect(() =>
+        testLogger.info('Complex data test', complexData)
+      ).not.toThrow();
     });
   });
 
@@ -285,7 +289,9 @@ describe('Logger', () => {
       const circular: Record<string, unknown> = { name: 'test' };
       circular.self = circular;
 
-      expect(() => testLogger.info('Circular reference test', circular)).not.toThrow();
+      expect(() =>
+        testLogger.info('Circular reference test', circular)
+      ).not.toThrow();
     });
 
     test('should handle very long messages', () => {
@@ -348,7 +354,9 @@ describe('Logger', () => {
         colors: false,
         level: LogLevel.INFO,
       });
-      expect(() => testLogger.info('Test message', { key: 'value' })).not.toThrow();
+      expect(() =>
+        testLogger.info('Test message', { key: 'value' })
+      ).not.toThrow();
     });
 
     test('should handle JSON serialization errors gracefully', () => {
@@ -405,7 +413,9 @@ describe('Logger', () => {
         level: LogLevel.INFO,
       });
 
-      expect(() => testLogger.info('Test with invalid stack format')).not.toThrow();
+      expect(() =>
+        testLogger.info('Test with invalid stack format')
+      ).not.toThrow();
 
       global.Error = originalError;
     });
@@ -443,7 +453,9 @@ describe('Logger', () => {
         level: LogLevel.INFO,
       });
 
-      expect(() => testLogger.info('Test with problematic file paths')).not.toThrow();
+      expect(() =>
+        testLogger.info('Test with problematic file paths')
+      ).not.toThrow();
 
       global.Error = originalError;
     });
@@ -566,7 +578,7 @@ describe('Logger', () => {
       testLogger.table(data);
 
       const output = mockOutput.join('');
-      expect(output).toContain('name');  // Headers are the actual keys
+      expect(output).toContain('name'); // Headers are the actual keys
       expect(output).toContain('age');
       expect(output).toContain('Alice');
       expect(output).toContain('Bob');
@@ -629,7 +641,7 @@ describe('Logger', () => {
     test('should respect log level filtering', () => {
       const restrictedLogger = new Logger({
         output: testLogger.getConfig().output,
-        level: LogLevel.WARN,  // This should block INFO level table calls
+        level: LogLevel.WARN, // This should block INFO level table calls
         colors: false,
         timestamps: false,
       });
@@ -637,7 +649,7 @@ describe('Logger', () => {
       const data = [{ name: 'Alice', age: 25 }];
 
       restrictedLogger.table(data);
-      expect(mockOutput.length).toBe(0);  // Should NOT output anything
+      expect(mockOutput.length).toBe(0); // Should NOT output anything
 
       // Test that it works when level allows it
       restrictedLogger.setLevel(LogLevel.INFO);
