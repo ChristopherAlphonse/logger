@@ -41,7 +41,7 @@ logger.error('Database connection failed', { error: 'Connection timeout' });
 logger.info('User login', {
   userId: '12345',
   method: 'email',
-  timestamp: new Date().toISOString()
+  timestamp: new Date().toISOString(),
 });
 
 // AI error analysis (automatic)
@@ -91,8 +91,8 @@ const logger = new Logger({
   ai: {
     enabled: true,
     provider: 'ollama', // 'openai' | 'claude' | 'disabled'
-    caching: true
-  }
+    caching: true,
+  },
 });
 ```
 
@@ -119,6 +119,7 @@ dbLogger.error('Query failed', { query: 'SELECT * FROM users' });
 ## API Reference
 
 ### Core Methods
+
 ```typescript
 logger.error(message: string, data?: any): void
 logger.warn(message: string, data?: any): void
@@ -132,13 +133,14 @@ logger.setLevel(level: LogLevel): void
 ```
 
 ### Log Levels
+
 ```typescript
 enum LogLevel {
-  ERROR = 0,   // Only errors
-  WARN = 1,    // Warnings and errors  
-  INFO = 2,    // Info, warnings, and errors (default)
-  DEBUG = 3,   // Debug and above
-  TRACE = 4    // Everything
+  ERROR = 0, // Only errors
+  WARN = 1, // Warnings and errors
+  INFO = 2, // Info, warnings, and errors (default)
+  DEBUG = 3, // Debug and above
+  TRACE = 4, // Everything
 }
 ```
 
@@ -155,7 +157,7 @@ app.use((req, res, next) => {
   logger.info('Request', {
     method: req.method,
     url: req.url,
-    userAgent: req.get('User-Agent')
+    userAgent: req.get('User-Agent'),
   });
   next();
 });
