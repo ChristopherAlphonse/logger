@@ -4,18 +4,11 @@ import { ConfigManager } from './config-manager';
 import { processConsoleArgs } from './console-utils';
 import { LogFormatter } from './formatters';
 import { createInternalLogger } from './internalLogger';
-import {
-  type ILogger,
-  type LogData,
-  type LogEntry,
-  LogLevel,
-  type LoggerConfig,
-} from './types';
+import { type ILogger, type LogData, type LogEntry, LogLevel, type LoggerConfig } from './types';
 import type { AIInsight, ErrorAnalysis } from './types';
 
 const chalk =
-  (chalkModule as typeof chalkModule & { default?: typeof chalkModule })
-    ?.default || chalkModule;
+  (chalkModule as typeof chalkModule & { default?: typeof chalkModule })?.default || chalkModule;
 
 export class Logger implements ILogger {
   private config: LoggerConfig;
@@ -33,9 +26,7 @@ export class Logger implements ILogger {
       prefix: '',
       json: false,
       output:
-        typeof process !== 'undefined' && process.stdout
-          ? process.stdout
-          : { write: console.log },
+        typeof process !== 'undefined' && process.stdout ? process.stdout : { write: console.log },
       ...config,
     };
 
@@ -45,9 +36,7 @@ export class Logger implements ILogger {
         'Invalid output stream provided in configuration. Falling back to process.stdout. Please check your logger configuration.'
       );
       this.config.output =
-        typeof process !== 'undefined' && process.stdout
-          ? process.stdout
-          : { write: console.log };
+        typeof process !== 'undefined' && process.stdout ? process.stdout : { write: console.log };
     }
 
     this.formatter = new LogFormatter();
@@ -126,11 +115,7 @@ export class Logger implements ILogger {
 
     try {
       if (this.aiService) {
-        const translatedMessage = await this.aiService.translateLog(
-          message,
-          level,
-          data
-        );
+        const translatedMessage = await this.aiService.translateLog(message, level, data);
 
         if (translatedMessage && translatedMessage !== message) {
           this.displayAITranslation(translatedMessage, level);
@@ -145,10 +130,7 @@ export class Logger implements ILogger {
     }
   }
 
-  private displayAITranslation(
-    translatedMessage: string,
-    level: LogLevel
-  ): void {
+  private displayAITranslation(translatedMessage: string, level: LogLevel): void {
     const prefix = this.config.prefix ? `[${this.config.prefix}] ` : '';
 
     if (this.config.colors) {
@@ -186,9 +168,7 @@ export class Logger implements ILogger {
 
     const aiConfig = this.configManager.getAIConfig();
     return (
-      aiConfig.enabled &&
-      aiConfig.translateLogs &&
-      aiConfig.translateLogLevels.includes(level)
+      aiConfig.enabled && aiConfig.translateLogs && aiConfig.translateLogLevels.includes(level)
     );
   }
 
@@ -240,9 +220,7 @@ export class Logger implements ILogger {
 
   table(
     dataOrLevel: LogLevel | Record<string, unknown>[],
-    dataOrOptions?:
-      | Record<string, unknown>[]
-      | { headers?: string[]; border?: boolean },
+    dataOrOptions?: Record<string, unknown>[] | { headers?: string[]; border?: boolean },
     options: { headers?: string[]; border?: boolean } = {}
   ): void {
     let level: LogLevel;
@@ -252,8 +230,7 @@ export class Logger implements ILogger {
     if (Array.isArray(dataOrLevel)) {
       level = LogLevel.INFO;
       data = dataOrLevel;
-      finalOptions =
-        (dataOrOptions as { headers?: string[]; border?: boolean }) || {};
+      finalOptions = (dataOrOptions as { headers?: string[]; border?: boolean }) || {};
     } else {
       level = dataOrLevel;
       data = (dataOrOptions as Record<string, unknown>[]) || [];
@@ -265,7 +242,7 @@ export class Logger implements ILogger {
     }
 
     // Safely serialize the data to handle edge cases
-    const safeData = data ? data.map(item => this.safeStringifyObject(item)) : [];
+    const safeData = data ? data.map((item) => this.safeStringifyObject(item)) : [];
 
     const entry: LogEntry = {
       level,
@@ -283,12 +260,7 @@ export class Logger implements ILogger {
       const output = this.formatter.formatJson(entry);
       this.write(output);
     } else {
-      const outputs = this.formatter.formatTable(
-        entry,
-        safeData,
-        this.config,
-        finalOptions
-      );
+      const outputs = this.formatter.formatTable(entry, safeData, this.config, finalOptions);
       for (const output of outputs) {
         this.write(output);
       }
@@ -298,9 +270,7 @@ export class Logger implements ILogger {
   private write(output: string): void {
     const stream =
       this.config.output ||
-      (typeof process !== 'undefined' && process.stdout
-        ? process.stdout
-        : { write: console.log });
+      (typeof process !== 'undefined' && process.stdout ? process.stdout : { write: console.log });
     stream.write(output);
   }
 
@@ -332,16 +302,14 @@ export class Logger implements ILogger {
       let match = regex1.exec(line);
       if (match) {
         const [, _functionName, filePath, lineNum] = match;
-        const fileName =
-          filePath.split('/').pop()?.split('\\').pop() || 'unknown';
+        const fileName = filePath.split('/').pop()?.split('\\').pop() || 'unknown';
         return `${fileName}:${lineNum}`;
       }
       const regex2 = /at\s+(.+):(\d+):(\d+)/;
       match = regex2.exec(line);
       if (match) {
         const [, filePath, lineNum] = match;
-        const fileName =
-          filePath.split('/').pop()?.split('\\').pop() || 'unknown';
+        const fileName = filePath.split('/').pop()?.split('\\').pop() || 'unknown';
         return `${fileName}:${lineNum}`;
       }
     }
@@ -361,18 +329,13 @@ export class Logger implements ILogger {
     }
   }
 
-  private async analyzeWithAI(
-    level: LogLevel,
-    message: string,
-    data?: LogData
-  ): Promise<void> {
+  private async analyzeWithAI(level: LogLevel, message: string, data?: LogData): Promise<void> {
     if (!this.aiService || !this.shouldAnalyzeWithAI(level, data)) {
       return;
     }
 
     try {
-      const error =
-        data instanceof Error ? data : (data as Record<string, unknown>)?.error;
+      const error = data instanceof Error ? data : (data as Record<string, unknown>)?.error;
       if (error instanceof Error) {
         const insight = await this.aiService.analyzeError(error, {
           message,
@@ -396,13 +359,9 @@ export class Logger implements ILogger {
 
   private displayAIInsight(insight: AIInsight): void {
     const defaultOutput =
-      typeof process !== 'undefined' && process.stdout
-        ? process.stdout.write
-        : console.log;
+      typeof process !== 'undefined' && process.stdout ? process.stdout.write : console.log;
     const output = this.config.output?.write || defaultOutput;
-    const header = this.config.colors
-      ? chalk.cyan('\nAI Insight:\n')
-      : '\nAI Insight:\n';
+    const header = this.config.colors ? chalk.cyan('\nAI Insight:\n') : '\nAI Insight:\n';
     const explanation = this.config.colors
       ? chalk.blue(`   Explanation: ${insight.explanation}\n`)
       : `   Explanation: ${insight.explanation}\n`;
@@ -419,9 +378,7 @@ export class Logger implements ILogger {
 
     if (insight.contextualInsights.length > 0) {
       const context = this.config.colors
-        ? chalk.magenta(
-            `   Context: ${insight.contextualInsights.join(', ')}\n`
-          )
+        ? chalk.magenta(`   Context: ${insight.contextualInsights.join(', ')}\n`)
         : `   Context: ${insight.contextualInsights.join(', ')}\n`;
       output(context);
     }
@@ -484,9 +441,7 @@ export class Logger implements ILogger {
     const isHealthy = await this.aiService.isHealthy();
     return {
       success: isHealthy,
-      message: isHealthy
-        ? 'AI service is working'
-        : 'AI service health check failed',
+      message: isHealthy ? 'AI service is working' : 'AI service health check failed',
     };
   }
 
@@ -495,9 +450,7 @@ export class Logger implements ILogger {
     return this.aiService.getStats();
   }
 
-  async switchAIProvider(
-    provider: 'ollama' | 'openai' | 'claude' | 'disabled'
-  ): Promise<void> {
+  async switchAIProvider(provider: 'ollama' | 'openai' | 'claude' | 'disabled'): Promise<void> {
     this.configManager.updateConfig({
       ai: {
         ...this.configManager.getAIConfig(),
@@ -512,10 +465,7 @@ export class Logger implements ILogger {
   ): boolean {
     if (!stream || typeof stream !== 'object') return false;
     if (typeof stream.write !== 'function') return false;
-    if (
-      typeof process !== 'undefined' &&
-      (stream === process.stdout || stream === process.stderr)
-    )
+    if (typeof process !== 'undefined' && (stream === process.stdout || stream === process.stderr))
       return true;
     if (stream.constructor?.name) {
       const validConstructors = [
@@ -532,61 +482,77 @@ export class Logger implements ILogger {
   }
 
   /**
+   * Handle object type conversion to string with circular reference protection
+   */
+  private convertObjectToString(value: object, seen: WeakSet<object>): string {
+    if (seen.has(value)) {
+      return '[Circular Reference]';
+    }
+    seen.add(value);
+
+    try {
+      return this.getObjectTypeString(value);
+    } finally {
+      seen.delete(value);
+    }
+  }
+
+  /**
+   * Get string representation for different object types
+   */
+  private getObjectTypeString(value: object): string {
+    if (Array.isArray(value)) {
+      return `[Array(${value.length})]`;
+    }
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+    if (value instanceof Error) {
+      return `[Error: ${value.message}]`;
+    }
+    if (value instanceof Map) {
+      return `[Map(${value.size})]`;
+    }
+    if (value instanceof Set) {
+      return `[Set(${value.size})]`;
+    }
+
+    // For plain objects, show constructor name
+    const constructorName = value.constructor?.name || 'Object';
+    return `[${constructorName}]`;
+  }
+
+  /**
    * Safely converts a value to string, handling edge cases like BigInt, circular references, etc.
    */
   private valueToString(value: unknown, seen = new WeakSet()): string {
     // Handle primitives first
     if (value === null) return 'null';
     if (value === undefined) return 'undefined';
-    
+
     // Handle primitive types
     const primitiveTypes: Record<string, (val: unknown) => string> = {
-      'string': (val) => val as string,
-      'number': (val) => String(val),
-      'boolean': (val) => String(val),
-      'bigint': (val) => `${val}n`,
-      'symbol': (val) => String(val),
-      'function': (val) => `[Function: ${(val as Function).name || 'anonymous'}]`
+      string: (val) => val as string,
+      number: (val) => String(val),
+      boolean: (val) => String(val),
+      bigint: (val) => `${val}n`,
+      symbol: (val) => String(val),
+      function: (val) => {
+        const func = val as (...args: unknown[]) => unknown;
+        return `[Function: ${func.name || 'anonymous'}]`;
+      },
     };
-    
+
     const valueType = typeof value;
     if (primitiveTypes[valueType]) {
       return primitiveTypes[valueType](value);
     }
-    
+
     // Handle objects with circular reference protection
     if (typeof value === 'object' && value !== null) {
-      if (seen.has(value)) {
-        return '[Circular Reference]';
-      }
-      seen.add(value);
-      
-      try {
-        // Handle special object types
-        if (Array.isArray(value)) {
-          return `[Array(${value.length})]`;
-        }
-        if (value instanceof Date) {
-          return value.toISOString();
-        }
-        if (value instanceof Error) {
-          return `[Error: ${value.message}]`;
-        }
-        if (value instanceof Map) {
-          return `[Map(${value.size})]`;
-        }
-        if (value instanceof Set) {
-          return `[Set(${value.size})]`;
-        }
-        
-        // For plain objects, show constructor name
-        const constructor = value.constructor?.name || 'Object';
-        return `[${constructor}]`;
-      } finally {
-        seen.delete(value);
-      }
+      return this.convertObjectToString(value, seen);
     }
-    
+
     return String(value);
   }
 
@@ -597,29 +563,32 @@ export class Logger implements ILogger {
     if (obj === null || obj === undefined) {
       return {};
     }
-    
+
     if (typeof obj !== 'object') {
       return { value: this.valueToString(obj) };
     }
-    
+
     if (Array.isArray(obj)) {
-      return obj.reduce((acc, item, index) => {
-        acc[index] = this.valueToString(item);
-        return acc;
-      }, {} as Record<string, unknown>);
+      return obj.reduce(
+        (acc, item, index) => {
+          acc[index] = this.valueToString(item);
+          return acc;
+        },
+        {} as Record<string, unknown>
+      );
     }
-    
+
     const result: Record<string, unknown> = {};
     const seen = new WeakSet();
-    
+
     try {
       for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
         result[key] = this.valueToString(value, seen);
       }
     } catch (error) {
-      result['_serialization_error'] = `Failed to serialize: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      result._serialization_error = `Failed to serialize: ${error instanceof Error ? error.message : 'Unknown error'}`;
     }
-    
+
     return result;
   }
 }
