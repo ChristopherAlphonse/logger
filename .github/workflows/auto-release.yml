@@ -145,7 +145,7 @@ jobs:
             `,
               draft: false
             });
-            
+
             // Auto-approve the PR since it's automated
             await github.rest.pulls.createReview({
               owner: context.repo.owner,
@@ -228,9 +228,9 @@ jobs:
           release_name: Release v${{ steps.version.outputs.version }}
           body: |
             ## Release v${{ steps.version.outputs.version }}
-            
+
             This release was automatically created from the merged release PR.
-            
+
             See CHANGELOG.md for detailed changes.
           draft: false
           prerelease: false
