@@ -6,21 +6,12 @@
   "homepage": "https://github.com/ChristopherAlphonse/logger",
   "repository": "github:ChristopherAlphonse/logger",
   "license": "MIT",
-  "keywords": [
-    "logger",
-    "logging",
-    "chalk",
-    "colors",
-    "console",
-    "utility"
-  ],
+  "keywords": ["logger", "logging", "chalk", "colors", "console", "utility"],
   "main": "dist/index.cjs",
   "module": "dist/index.es.js",
   "types": "dist/index.d.ts",
   "type": "module",
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "scripts": {
     "dev": "tsc && vite build --watch",
     "build": "tsc && vite build",

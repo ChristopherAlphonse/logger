@@ -169,10 +169,10 @@ export class Logger implements ILogger {
           break;
       }
       const resetCode = '\x1b[0m';
-      const output = `${prefix}💡 AI Translation: ${colorCode}${translatedMessage}${resetCode}\n`;
+      const output = `${prefix}💡 : ${colorCode}${translatedMessage}${resetCode}\n`;
       this.write(output);
     } else {
-      const output = `${prefix}💡 AI Translation: ${translatedMessage}\n`;
+      const output = `${prefix}💡 : ${translatedMessage}\n`;
       this.write(output);
     }
   }
@@ -239,7 +239,119 @@ export class Logger implements ILogger {
   }
 
   table(data: Record<string, unknown> | Record<string, unknown>[]): void {
-    console.table(data);
+    if (!this.isEnabled(LogLevel.INFO)) {
+      return;
+    }
+
+    if (this.config.json) {
+      this.log(LogLevel.INFO, 'Table data', data);
+      return;
+    }
+
+    const tableData = Array.isArray(data) ? data : [data];
+
+    if (tableData.length === 0) {
+      this.log(LogLevel.INFO, '(empty table)');
+      return;
+    }
+
+    const valueToString = (value: unknown): string => {
+      if (value === null) return 'null';
+      if (value === undefined) return 'undefined';
+      if (typeof value === 'string') return value;
+      if (typeof value === 'number' || typeof value === 'boolean')
+        return String(value);
+      if (typeof value === 'object') return JSON.stringify(value);
+      if (typeof value === 'function') return '[Function]';
+      if (typeof value === 'symbol') return value.toString();
+      return JSON.stringify(value);
+    };
+
+    // Function to colorize units in values
+    const colorizeUnits = (value: string): string => {
+      if (!this.config.colors) return value;
+
+      // Common units to colorize
+      const unitPatterns = [
+        /(\d+)(ms|s|m|h|d)\b/g, // Time units: ms, s, m, h, d
+        /(\d+(?:\.\d+)?)(MB|GB|KB|TB|B)\b/g, // Memory units: MB, GB, KB, TB, B
+        /(\d+(?:\.\d+)?)(%)$/g, // Percentage
+      ];
+
+      let colorizedValue = value;
+      for (const pattern of unitPatterns) {
+        colorizedValue = colorizedValue.replace(
+          pattern,
+          (match, number, unit) => {
+            return number + chalk.gray(unit);
+          }
+        );
+      }
+
+      return colorizedValue;
+    };
+
+    // Get all unique keys
+    const allKeys = new Set<string>();
+    for (const item of tableData) {
+      Object.keys(item).forEach(key => allKeys.add(key));
+    }
+    const keys = Array.from(allKeys);
+
+    // Calculate column widths
+    const indexWidth = Math.max(9, String(tableData.length - 1).length + 2);
+    const keyWidths = keys.map(key => {
+      const headerWidth = key.length;
+      const maxDataWidth = Math.max(
+        ...tableData.map(item => {
+          const value = valueToString(item[key]);
+          return value.length;
+        })
+      );
+      return Math.max(headerWidth, maxDataWidth) + 2;
+    });
+
+    // Create table
+    const separator =
+      '+' +
+      '-'.repeat(indexWidth) +
+      '+' +
+      keys.map((_, i) => '-'.repeat(keyWidths[i])).join('+') +
+      '+';
+
+    let table = separator + '\n';
+
+    // Header row
+    table +=
+      '|' +
+      ' (index) '.padEnd(indexWidth) +
+      '|' +
+      keys.map((key, i) => (' ' + key + ' ').padEnd(keyWidths[i])).join('|') +
+      '|\n';
+
+    table += separator + '\n';
+
+    // Data rows
+    tableData.forEach((item, index) => {
+      table +=
+        '|' +
+        (' ' + String(index) + ' ').padEnd(indexWidth) +
+        '|' +
+        keys
+          .map((key, i) => {
+            const value = valueToString(item[key]);
+            const colorizedValue = colorizeUnits(value);
+            // Calculate padding based on original value length (without ANSI codes)
+            const padding = keyWidths[i] - value.length - 1;
+            return ' ' + colorizedValue + ' '.repeat(Math.max(0, padding));
+          })
+          .join('|') +
+        '|\n';
+    });
+
+    table += separator;
+
+    this.log(LogLevel.INFO, '\n' + table);
   }
 
   private write(output: string): void {

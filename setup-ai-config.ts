@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
-import { ConfigManager } from './src/config-manager';
 import { join } from 'node:path';
+import { ConfigManager } from './src/config-manager';
 
 /**
  * Setup script for AI-powered logging
@@ -67,3 +67,6 @@ try {
     console.error('Error testing current configuration:', error);
   }
 }
+
+// Execute the main function
+main().catch(console.error);

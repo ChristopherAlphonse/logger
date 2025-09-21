@@ -21,9 +21,10 @@ const userData = [
   { name: 'Charlie Brown', age: 29, role: 'Manager', salary: 95000 },
   { name: 'Diana Prince', age: 31, role: 'Developer', salary: 78000 },
 ];
+logger.table(userData);
 
 demoLogger.info('\nTable without Borders:');
-logger.table(LogLevel.INFO, userData, { border: false });
+logger.table(userData);
 
 demoLogger.info('\nTable with Mixed Data Types:');
 const mixedData = [
@@ -56,7 +57,7 @@ const mixedData = [
   },
 ];
 
-logger.table(LogLevel.INFO, mixedData);
+logger.table(mixedData);
 
 demoLogger.info('\nTable with Missing Data:');
 const incompleteData = [
@@ -66,14 +67,14 @@ const incompleteData = [
   { name: 'Diana' },
 ];
 
-logger.table(LogLevel.INFO, incompleteData);
+logger.table(incompleteData);
 
 demoLogger.info('\nEmpty Table:');
-logger.table(LogLevel.INFO, []);
+logger.table([]);
 
 demoLogger.info('\nLogger with Prefix:');
 const prefixedLogger = logger.child('DATA');
-prefixedLogger.table(LogLevel.INFO, userData.slice(0, 2));
+prefixedLogger.table(userData.slice(0, 2));
 
 demoLogger.info('\nPerformance Metrics Table:');
 const performanceData = [
@@ -103,4 +104,4 @@ const performanceData = [
   },
 ];
 
-logger.table(LogLevel.INFO, performanceData);
+logger.table(performanceData);

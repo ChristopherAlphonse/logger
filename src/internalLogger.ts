@@ -33,6 +33,7 @@ class SimpleInternalLogger {
     if (typeof process !== 'undefined' && process.stdout) {
       process.stdout.write(output);
     } else {
+      console.info(output.trim());
     }
   }
 }
