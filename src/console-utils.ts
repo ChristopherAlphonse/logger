@@ -104,5 +104,5 @@ export function serializeForConsole(obj: unknown): string {
     }
   }
 
-  return obj !== null && obj !== undefined ? String(obj) : String(obj);
+  return String(obj);
 }
