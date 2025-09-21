@@ -666,7 +666,11 @@ describe('Logger', () => {
       const parsed = JSON.parse(output);
       expect(parsed.level).toBe('INFO');
       expect(parsed.message).toBe('Table data');
-      expect(parsed.data).toEqual(data);
+      // The data is now safely serialized, numbers become strings
+      expect(parsed.data).toEqual([
+        { name: 'Alice', age: '25' },
+        { name: 'Bob', age: '30' },
+      ]);
     });
 
     test('should include source information when enabled', () => {

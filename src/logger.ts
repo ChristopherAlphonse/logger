@@ -256,7 +256,7 @@ export class Logger implements ILogger {
         (dataOrOptions as { headers?: string[]; border?: boolean }) || {};
     } else {
       level = dataOrLevel;
-      data = dataOrOptions as Record<string, unknown>[];
+      data = (dataOrOptions as Record<string, unknown>[]) || [];
       finalOptions = options;
     }
 
@@ -265,7 +265,7 @@ export class Logger implements ILogger {
     }
 
     // Safely serialize the data to handle edge cases
-    const safeData = data.map(item => this.safeStringifyObject(item));
+    const safeData = data ? data.map(item => this.safeStringifyObject(item)) : [];
 
     const entry: LogEntry = {
       level,
