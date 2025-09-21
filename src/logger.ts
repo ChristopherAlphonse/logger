@@ -4,18 +4,11 @@ import { ConfigManager } from './config-manager';
 import { processConsoleArgs } from './console-utils';
 import { LogFormatter } from './formatters';
 import { createInternalLogger } from './internalLogger';
+import { type ILogger, type LogData, type LogEntry, LogLevel, type LoggerConfig } from './types';
 import type { AIInsight, ErrorAnalysis } from './types';
-import {
-  type ILogger,
-  type LogData,
-  type LogEntry,
-  LogLevel,
-  type LoggerConfig,
-} from './types';
 
 const chalk =
-  (chalkModule as typeof chalkModule & { default?: typeof chalkModule })
-    ?.default || chalkModule;
+  (chalkModule as typeof chalkModule & { default?: typeof chalkModule })?.default || chalkModule;
 
 export class Logger implements ILogger {
   private config: LoggerConfig;
@@ -33,9 +26,7 @@ export class Logger implements ILogger {
       prefix: '',
       json: false,
       output:
-        typeof process !== 'undefined' && process.stdout
-          ? process.stdout
-          : { write: console.log },
+        typeof process !== 'undefined' && process.stdout ? process.stdout : { write: console.log },
       ...config,
     };
 
@@ -45,9 +36,7 @@ export class Logger implements ILogger {
         'Invalid output stream provided in configuration. Falling back to process.stdout. Please check your logger configuration.'
       );
       this.config.output =
-        typeof process !== 'undefined' && process.stdout
-          ? process.stdout
-          : { write: console.log };
+        typeof process !== 'undefined' && process.stdout ? process.stdout : { write: console.log };
     }
 
     this.formatter = new LogFormatter();
@@ -126,11 +115,7 @@ export class Logger implements ILogger {
 
     try {
       if (this.aiService) {
-        const translatedMessage = await this.aiService.translateLog(
-          message,
-          level,
-          data
-        );
+        const translatedMessage = await this.aiService.translateLog(message, level, data);
 
         if (translatedMessage && translatedMessage !== message) {
           this.displayAITranslation(translatedMessage, level);
@@ -145,10 +130,7 @@ export class Logger implements ILogger {
     }
   }
 
-  private displayAITranslation(
-    translatedMessage: string,
-    level: LogLevel
-  ): void {
+  private displayAITranslation(translatedMessage: string, level: LogLevel): void {
     const prefix = this.config.prefix ? `[${this.config.prefix}] ` : '';
 
     if (this.config.colors) {
@@ -186,9 +168,7 @@ export class Logger implements ILogger {
 
     const aiConfig = this.configManager.getAIConfig();
     return (
-      aiConfig.enabled &&
-      aiConfig.translateLogs &&
-      aiConfig.translateLogLevels.includes(level)
+      aiConfig.enabled && aiConfig.translateLogs && aiConfig.translateLogLevels.includes(level)
     );
   }
 
@@ -238,166 +218,59 @@ export class Logger implements ILogger {
     return new Logger(childConfig);
   }
 
-  table(data: Record<string, unknown> | Record<string, unknown>[]): void {
-    if (!this.isEnabled(LogLevel.INFO)) {
+  table(
+    dataOrLevel: LogLevel | Record<string, unknown>[],
+    dataOrOptions?: Record<string, unknown>[] | { headers?: string[]; border?: boolean },
+    options: { headers?: string[]; border?: boolean } = {}
+  ): void {
+    let level: LogLevel;
+    let data: Record<string, unknown>[];
+    let finalOptions: { headers?: string[]; border?: boolean };
+
+    if (Array.isArray(dataOrLevel)) {
+      level = LogLevel.INFO;
+      data = dataOrLevel;
+      finalOptions = (dataOrOptions as { headers?: string[]; border?: boolean }) || {};
+    } else {
+      level = dataOrLevel;
+      data = (dataOrOptions as Record<string, unknown>[]) || [];
+      finalOptions = options;
+    }
+
+    if (!this.isEnabled(level)) {
       return;
+    }
+
+    // Safely serialize the data to handle edge cases
+    const safeData = data ? data.map((item) => this.safeStringifyObject(item)) : [];
+
+    const entry: LogEntry = {
+      level,
+      message: 'Table data',
+      timestamp: new Date(),
+      data: safeData,
+      prefix: this.config.prefix,
+    };
+
+    if (this.config.showSource) {
+      entry.source = this.getSourceInfo();
     }
 
     if (this.config.json) {
-      this.log(LogLevel.INFO, 'Table data', data);
-      return;
-    }
-
-    // Handle null/undefined data
-    if (!data) {
-      this.log(LogLevel.INFO, 'No data to display');
-      return;
-    }
-
-    const tableData = Array.isArray(data) ? data : [data];
-
-    if (tableData.length === 0) {
-      this.log(LogLevel.INFO, 'No data to display');
-      return;
-    }
-
-    const safeStringifyObject = (value: object): string => {
-      try {
-        // Use a WeakSet to track circular references
-        const seen = new WeakSet();
-
-        return JSON.stringify(value, (_key, val) => {
-          // Handle BigInt values
-          if (typeof val === 'bigint') {
-            return `${val.toString()}n`;
-          }
-
-          // Handle circular references
-          if (typeof val === 'object' && val !== null) {
-            if (seen.has(val)) {
-              return '[Circular]';
-            }
-            seen.add(val);
-          }
-
-          return val;
-        });
-      } catch (error) {
-        // JSON.stringify failed, fallback to safe string representation
-        // This can happen with circular references or other serialization issues
-        if (error instanceof Error) {
-          // Log the error silently or handle as needed
-        }
-        return '[Object]';
-      }
-    };
-
-    const typeHandlers = {
-      string: (val: unknown) => val as string,
-      number: (val: unknown) => String(val),
-      boolean: (val: unknown) => String(val),
-      bigint: (val: unknown) => `${(val as bigint).toString()}n`,
-      function: () => '[Function]',
-      symbol: (val: unknown) => (val as symbol).toString(),
-      object: (val: unknown) => safeStringifyObject(val as object),
-    };
-
-    const valueToString = (value: unknown): string => {
-      if (value === null) return 'null';
-      if (value === undefined) return 'undefined';
-
-      const valueType = typeof value;
-      const handler = typeHandlers[valueType as keyof typeof typeHandlers];
-
-      return handler ? handler(value) : '[Unknown]';
-    }; // Function to colorize units in values
-    const colorizeUnits = (value: string): string => {
-      if (!this.config.colors) return value;
-
-      // Common units to colorize
-      const unitPatterns = [
-        /(\d+)(ms|s|m|h|d)\b/g, // Time units: ms, s, m, h, d
-        /(\d+(?:\.\d+)?)(MB|GB|KB|TB|B)\b/g, // Memory units: MB, GB, KB, TB, B
-        /(\d+(?:\.\d+)?)(%)$/g, // Percentage
-      ];
-
-      let colorizedValue = value;
-      for (const pattern of unitPatterns) {
-        colorizedValue = colorizedValue.replace(
-          pattern,
-          (_match, number, unit) => {
-            return number + chalk.gray(unit);
-          }
-        );
-      }
-
-      return colorizedValue;
-    };
-
-    // Get all unique keys
-    const allKeys = new Set<string>();
-    for (const item of tableData) {
-      if (item && typeof item === 'object') {
-        for (const key of Object.keys(item)) {
-          allKeys.add(key);
-        }
+      const output = this.formatter.formatJson(entry);
+      this.write(output);
+    } else {
+      const outputs = this.formatter.formatTable(entry, safeData, this.config, finalOptions);
+      for (const output of outputs) {
+        this.write(output);
       }
     }
-    const keys = Array.from(allKeys);
-
-    // Calculate column widths
-    const indexWidth = Math.max(9, String(tableData.length - 1).length + 2);
-    const keyWidths = keys.map(key => {
-      const headerWidth = key.length;
-      const maxDataWidth = Math.max(
-        ...tableData.map(item => {
-          const value = valueToString(item[key]);
-          return value.length;
-        })
-      );
-      return Math.max(headerWidth, maxDataWidth) + 2;
-    });
-
-    // Create table
-    const separator = `+${'-'.repeat(indexWidth)}+${keys
-      .map((_, i) => '-'.repeat(keyWidths[i]))
-      .join('+')}+`;
-
-    let table = `${separator}\n`;
-
-    // Header row
-    table += `|${' (index) '.padEnd(indexWidth)}|${keys
-      .map((key, i) => ` ${key} `.padEnd(keyWidths[i]))
-      .join('|')}|\n`;
-
-    table += `${separator}\n`;
-
-    // Data rows
-    tableData.forEach((item, index) => {
-      const indexCell = ` ${String(index)} `.padEnd(indexWidth);
-      const dataCells = keys
-        .map((key, i) => {
-          const value = valueToString(item[key]);
-          const colorizedValue = colorizeUnits(value);
-          // Calculate padding based on original value length (without ANSI codes)
-          const padding = keyWidths[i] - value.length - 1;
-          return ` ${colorizedValue}${' '.repeat(Math.max(0, padding))}`;
-        })
-        .join('|');
-      table += `|${indexCell}|${dataCells}|\n`;
-    });
-
-    table += separator;
-
-    this.log(LogLevel.INFO, `\n${table}`);
   }
 
   private write(output: string): void {
     const stream =
       this.config.output ||
-      (typeof process !== 'undefined' && process.stdout
-        ? process.stdout
-        : { write: console.log });
+      (typeof process !== 'undefined' && process.stdout ? process.stdout : { write: console.log });
     stream.write(output);
   }
 
@@ -429,16 +302,14 @@ export class Logger implements ILogger {
       let match = regex1.exec(line);
       if (match) {
         const [, _functionName, filePath, lineNum] = match;
-        const fileName =
-          filePath.split('/').pop()?.split('\\').pop() || 'unknown';
+        const fileName = filePath.split('/').pop()?.split('\\').pop() || 'unknown';
         return `${fileName}:${lineNum}`;
       }
       const regex2 = /at\s+(.+):(\d+):(\d+)/;
       match = regex2.exec(line);
       if (match) {
         const [, filePath, lineNum] = match;
-        const fileName =
-          filePath.split('/').pop()?.split('\\').pop() || 'unknown';
+        const fileName = filePath.split('/').pop()?.split('\\').pop() || 'unknown';
         return `${fileName}:${lineNum}`;
       }
     }
@@ -458,18 +329,13 @@ export class Logger implements ILogger {
     }
   }
 
-  private async analyzeWithAI(
-    level: LogLevel,
-    message: string,
-    data?: LogData
-  ): Promise<void> {
+  private async analyzeWithAI(level: LogLevel, message: string, data?: LogData): Promise<void> {
     if (!this.aiService || !this.shouldAnalyzeWithAI(level, data)) {
       return;
     }
 
     try {
-      const error =
-        data instanceof Error ? data : (data as Record<string, unknown>)?.error;
+      const error = data instanceof Error ? data : (data as Record<string, unknown>)?.error;
       if (error instanceof Error) {
         const insight = await this.aiService.analyzeError(error, {
           message,
@@ -493,13 +359,9 @@ export class Logger implements ILogger {
 
   private displayAIInsight(insight: AIInsight): void {
     const defaultOutput =
-      typeof process !== 'undefined' && process.stdout
-        ? process.stdout.write
-        : console.log;
+      typeof process !== 'undefined' && process.stdout ? process.stdout.write : console.log;
     const output = this.config.output?.write || defaultOutput;
-    const header = this.config.colors
-      ? chalk.cyan('\nAI Insight:\n')
-      : '\nAI Insight:\n';
+    const header = this.config.colors ? chalk.cyan('\nAI Insight:\n') : '\nAI Insight:\n';
     const explanation = this.config.colors
       ? chalk.blue(`   Explanation: ${insight.explanation}\n`)
       : `   Explanation: ${insight.explanation}\n`;
@@ -516,9 +378,7 @@ export class Logger implements ILogger {
 
     if (insight.contextualInsights.length > 0) {
       const context = this.config.colors
-        ? chalk.magenta(
-            `   Context: ${insight.contextualInsights.join(', ')}\n`
-          )
+        ? chalk.magenta(`   Context: ${insight.contextualInsights.join(', ')}\n`)
         : `   Context: ${insight.contextualInsights.join(', ')}\n`;
       output(context);
     }
@@ -581,9 +441,7 @@ export class Logger implements ILogger {
     const isHealthy = await this.aiService.isHealthy();
     return {
       success: isHealthy,
-      message: isHealthy
-        ? 'AI service is working'
-        : 'AI service health check failed',
+      message: isHealthy ? 'AI service is working' : 'AI service health check failed',
     };
   }
 
@@ -592,9 +450,7 @@ export class Logger implements ILogger {
     return this.aiService.getStats();
   }
 
-  async switchAIProvider(
-    provider: 'ollama' | 'openai' | 'claude' | 'disabled'
-  ): Promise<void> {
+  async switchAIProvider(provider: 'ollama' | 'openai' | 'claude' | 'disabled'): Promise<void> {
     this.configManager.updateConfig({
       ai: {
         ...this.configManager.getAIConfig(),
@@ -609,10 +465,7 @@ export class Logger implements ILogger {
   ): boolean {
     if (!stream || typeof stream !== 'object') return false;
     if (typeof stream.write !== 'function') return false;
-    if (
-      typeof process !== 'undefined' &&
-      (stream === process.stdout || stream === process.stderr)
-    )
+    if (typeof process !== 'undefined' && (stream === process.stdout || stream === process.stderr))
       return true;
     if (stream.constructor?.name) {
       const validConstructors = [
@@ -626,5 +479,116 @@ export class Logger implements ILogger {
     }
 
     return false;
+  }
+
+  /**
+   * Handle object type conversion to string with circular reference protection
+   */
+  private convertObjectToString(value: object, seen: WeakSet<object>): string {
+    if (seen.has(value)) {
+      return '[Circular Reference]';
+    }
+    seen.add(value);
+
+    try {
+      return this.getObjectTypeString(value);
+    } finally {
+      seen.delete(value);
+    }
+  }
+
+  /**
+   * Get string representation for different object types
+   */
+  private getObjectTypeString(value: object): string {
+    if (Array.isArray(value)) {
+      return `[Array(${value.length})]`;
+    }
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+    if (value instanceof Error) {
+      return `[Error: ${value.message}]`;
+    }
+    if (value instanceof Map) {
+      return `[Map(${value.size})]`;
+    }
+    if (value instanceof Set) {
+      return `[Set(${value.size})]`;
+    }
+
+    // For plain objects, show constructor name
+    const constructorName = value.constructor?.name || 'Object';
+    return `[${constructorName}]`;
+  }
+
+  /**
+   * Safely converts a value to string, handling edge cases like BigInt, circular references, etc.
+   */
+  private valueToString(value: unknown, seen = new WeakSet()): string {
+    // Handle primitives first
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+
+    // Handle primitive types
+    const primitiveTypes: Record<string, (val: unknown) => string> = {
+      string: (val) => val as string,
+      number: (val) => String(val),
+      boolean: (val) => String(val),
+      bigint: (val) => `${val}n`,
+      symbol: (val) => String(val),
+      function: (val) => {
+        const func = val as (...args: unknown[]) => unknown;
+        return `[Function: ${func.name || 'anonymous'}]`;
+      },
+    };
+
+    const valueType = typeof value;
+    if (primitiveTypes[valueType]) {
+      return primitiveTypes[valueType](value);
+    }
+
+    // Handle objects with circular reference protection
+    if (typeof value === 'object' && value !== null) {
+      return this.convertObjectToString(value, seen);
+    }
+
+    return String(value);
+  }
+
+  /**
+   * Safely stringify objects for serialization, with fallback handling
+   */
+  private safeStringifyObject(obj: unknown): Record<string, unknown> {
+    if (obj === null || obj === undefined) {
+      return {};
+    }
+
+    if (typeof obj !== 'object') {
+      return { value: this.valueToString(obj) };
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.reduce(
+        (acc, item, index) => {
+          acc[index] = this.valueToString(item);
+          return acc;
+        },
+        {} as Record<string, unknown>
+      );
+    }
+
+    const result: Record<string, unknown> = {};
+    const seen = new WeakSet();
+
+    try {
+      for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+        result[key] = this.valueToString(value, seen);
+      }
+    } catch (error) {
+      result._serialization_error = `Failed to serialize: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    }
+
+    return result;
   }
 }
