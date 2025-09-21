@@ -9,6 +9,19 @@
     "ignoreUnknown": false,
     "ignore": ["node_modules/**", "dist/**", "coverage/**", "*.min.js", "*.bundle.js"]
   },
+  "overrides": [
+    {
+      "include": ["examples/**", "setup-ai-config.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsoleLog": "off",
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    }
+  ],
   "formatter": {
     "enabled": true,
     "indentStyle": "space",

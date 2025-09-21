@@ -69,11 +69,11 @@ async function debugTranslation() {
 
   // Wait and see what happens
   console.log('   Waiting 10 seconds...');
-  await new Promise(resolve => setTimeout(resolve, 10000));
+  await new Promise((resolve) => setTimeout(resolve, 10000));
 
   console.log('\nDebug test completed!');
 }
 
-debugTranslation().catch(error => {
+debugTranslation().catch((error) => {
   console.error('Debug test failed:', error);
 });

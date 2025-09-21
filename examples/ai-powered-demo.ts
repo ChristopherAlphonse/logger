@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
-import { EnhancedLogger } from '../src/enhanced-logger';
 import { ConfigManager } from '../src/config-manager';
+import { EnhancedLogger } from '../src/enhanced-logger';
 
 /**
  * Demo of AI-powered logging features
@@ -29,15 +29,11 @@ async function main() {
 
   // Check AI availability
   const isAIHealthy = await logger.isAIHealthy();
-  console.log(
-    `AI Service Status: ${isAIHealthy ? 'Available' : 'Unavailable'}`
-  );
+  console.log(`AI Service Status: ${isAIHealthy ? 'Available' : 'Unavailable'}`);
 
   if (!isAIHealthy) {
     console.log('\nTo enable AI features:');
-    console.log(
-      '1. FREE: Install Ollama (https://ollama.ai) and run: ollama pull llama3.2:3b'
-    );
+    console.log('1. FREE: Install Ollama (https://ollama.ai) and run: ollama pull llama3.2:3b');
     console.log('2. PAID: Add OpenAI API key to .logger-ai.config.json');
     console.log('3. Run: node -r tsx/esm examples/ai-powered-demo.ts\n');
   }
@@ -46,9 +42,7 @@ async function main() {
   const aiStats = logger.getAIStats();
   if (aiStats) {
     console.log(`AI Provider: ${aiStats.provider}`);
-    console.log(
-      `Requests: ${aiStats.requestCount} total, ${aiStats.recentRequests} recent\n`
-    );
+    console.log(`Requests: ${aiStats.requestCount} total, ${aiStats.recentRequests} recent\n`);
   }
 
   // Demo 1: TypeError with AI analysis
@@ -88,9 +82,7 @@ async function main() {
   // Demo 3: React component error
   console.log('\nDemo 3: React Component Error\n');
 
-  const reactError = new Error(
-    "Cannot read properties of undefined (reading 'map')"
-  );
+  const reactError = new Error("Cannot read properties of undefined (reading 'map')");
   reactError.stack = `TypeError: Cannot read properties of undefined (reading 'map')
     at UserList (/app/components/UserList.tsx:15:20)
     at renderWithHooks (/app/node_modules/react-dom/cjs/react-dom.development.js:14985:18)
@@ -160,14 +152,14 @@ async function main() {
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // Create sample config if it doesn't exist
 function createConfigIfNeeded() {
   try {
     ConfigManager.createSampleConfig();
-  } catch (error) {
+  } catch (_error) {
     // Config might already exist, that's fine
   }
 }

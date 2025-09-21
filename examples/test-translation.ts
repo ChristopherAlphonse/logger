@@ -49,7 +49,7 @@ async function testTranslation() {
 
   // Wait for async translation
   console.log('   Waiting for translation...');
-  await new Promise(resolve => setTimeout(resolve, 5000));
+  await new Promise((resolve) => setTimeout(resolve, 5000));
 
   // This should be translated (WARN level)
   console.log('\n2. Testing WARN level translation:');
@@ -57,7 +57,7 @@ async function testTranslation() {
 
   // Wait for async translation
   console.log('   Waiting for translation...');
-  await new Promise(resolve => setTimeout(resolve, 5000));
+  await new Promise((resolve) => setTimeout(resolve, 5000));
 
   // This should NOT be translated (INFO level not in translateLogLevels)
   console.log('\n3. Testing INFO level (should not be translated):');

@@ -1,4 +1,4 @@
-import { Logger, EnhancedLogger } from '../src';
+import { EnhancedLogger, Logger } from '../src';
 
 function testConsoleCompatibility() {
   const logger = new Logger();

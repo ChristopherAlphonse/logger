@@ -29,9 +29,6 @@ export class LogFormatter {
     [LogLevel.TRACE]: chalk.gray,
   };
 
-  /**
-   * Format a log entry for output
-   */
   formatLogEntry(entry: LogEntry, config: LoggerConfig): string {
     if (config.json) {
       return this.formatJson(entry);
@@ -39,9 +36,6 @@ export class LogFormatter {
     return this.formatText(entry, config);
   }
 
-  /**
-   * Format log entry as JSON
-   */
   formatJson(entry: LogEntry): string {
     const jsonEntry = {
       timestamp: entry.timestamp.toISOString(),
@@ -55,9 +49,6 @@ export class LogFormatter {
     return `${JSON.stringify(jsonEntry)}\n`;
   }
 
-  /**
-   * Format log entry as colored text
-   */
   formatText(entry: LogEntry, config: LoggerConfig): string {
     const parts: string[] = [];
 
@@ -71,9 +62,6 @@ export class LogFormatter {
     return `${parts.join(' ')}\n`;
   }
 
-  /**
-   * Formats tabular data as a string array for text output.
-   */
   formatTable(
     entry: LogEntry,
     data: Record<string, unknown>[],

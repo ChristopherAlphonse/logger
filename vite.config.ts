@@ -7,7 +7,7 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'Logger',
-      fileName: format => (format === 'es' ? 'index.es.js' : 'index.cjs'),
+      fileName: (format) => (format === 'es' ? 'index.es.js' : 'index.cjs'),
       formats: ['es', 'cjs'],
     },
     rollupOptions: {

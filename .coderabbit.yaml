@@ -17,6 +17,7 @@ reviews:
         - Proper use of chalk and color output
         - Node.js compatibility (ESM/CJS)
         - Maintainability and documentation
+        - Clean code principles, SOLID, YAGNI, DRY, KISS
     - path: 'examples/**/*.ts'
       instructions: 'Review example usage for clarity, correctness, and best practices.'
     - path: 'docs/**/*.md'
