@@ -248,10 +248,16 @@ export class Logger implements ILogger {
       return;
     }
 
+    // Handle null/undefined data
+    if (!data) {
+      this.log(LogLevel.INFO, 'No data to display');
+      return;
+    }
+
     const tableData = Array.isArray(data) ? data : [data];
 
     if (tableData.length === 0) {
-      this.log(LogLevel.INFO, '(empty table)');
+      this.log(LogLevel.INFO, 'No data to display');
       return;
     }
 
@@ -294,7 +300,9 @@ export class Logger implements ILogger {
     // Get all unique keys
     const allKeys = new Set<string>();
     for (const item of tableData) {
-      Object.keys(item).forEach(key => allKeys.add(key));
+      if (item && typeof item === 'object') {
+        Object.keys(item).forEach(key => allKeys.add(key));
+      }
     }
     const keys = Array.from(allKeys);
 
