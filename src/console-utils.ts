@@ -1,23 +1,28 @@
 /**
- * Process console.log-style arguments into a message and data object
- * Supports format strings like %s, %d, %o, etc.
+ * Converts an arbitrary list of console-style arguments into a single message string and optional data payload.
+ *
+ * If `args` is empty returns `{ message: '' }`. If the first argument is a string containing printf-style
+ * format specifiers (`%s`, `%d`, `%i`, `%o`, `%O`, `%c`, `%f`) the function delegates to `formatString`
+ * using the remaining arguments as format values and trailing data. Otherwise it:
+ * - concatenates stringified arguments (objects are serialized via `serializeForConsole`) separated by spaces to form `message`,
+ * - collects any non-null objects into `data` (a single object if one was passed, or an array if multiple).
+ *
+ * @returns An object with `message` (always present) and optional `data` containing object argument(s) or remaining format arguments.
  */
-export function processConsoleArgs(args: any[]): {
+export function processConsoleArgs(args: unknown[]): {
   message: string;
-  data?: any;
+  data?: unknown;
 } {
   if (args.length === 0) {
     return { message: '' };
   }
 
-  // Check if first argument is a format string
   if (typeof args[0] === 'string' && hasFormatSpecifiers(args[0])) {
     return formatString(args[0], ...args.slice(1));
   }
 
-  // Handle multiple arguments like console.log('User:', user, 'Action:', action)
   const messageParts: string[] = [];
-  const dataParts: any[] = [];
+  const dataParts: unknown[] = [];
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -25,73 +30,85 @@ export function processConsoleArgs(args: any[]): {
     if (typeof arg === 'string') {
       messageParts.push(arg);
     } else if (typeof arg === 'object' && arg !== null) {
-      // Objects go to data, but keep their string representation in message
       dataParts.push(arg);
       messageParts.push(serializeForConsole(arg));
     } else {
-      // Primitives go to message
       messageParts.push(String(arg));
     }
   }
 
   const message = messageParts.join(' ');
   const data =
-    dataParts.length > 0
-      ? dataParts.length === 1
-        ? dataParts[0]
-        : dataParts
-      : undefined;
+    dataParts.length > 0 ? (dataParts.length === 1 ? dataParts[0] : dataParts) : undefined;
 
   return { message, data };
 }
 
 /**
- * Check if a string contains format specifiers like %s, %d, %o, etc.
+ * Returns true if the given string contains any printf-style format specifiers.
+ *
+ * Detects any of: `%s`, `%d`, `%i`, `%o`, `%O`, `%c`, `%f`.
+ *
+ * @param str - The string to scan for format specifiers
+ * @returns `true` when at least one specifier is present, otherwise `false`
  */
 export function hasFormatSpecifiers(str: string): boolean {
   return /%[sdioOcf]/.test(str);
 }
 
 /**
- * Format a string with printf-style specifiers
+ * Formats a printf-style string using the provided arguments and returns the formatted message plus any unused arguments as data.
+ *
+ * Replaces format specifiers in `format` with values from `args` in order:
+ * - `%s` — String coercion
+ * - `%d` — Number coercion (defaults to `0`) then string
+ * - `%i` — Number coercion, floored (defaults to `0`) then string
+ * - `%o` — Object serialization via `serializeForConsole`
+ * - `%O` — `JSON.stringify` with 2-space indentation
+ * - `%c` — String coercion
+ * - `%f` — Number coercion (defaults to `0`) then string
+ *
+ * If there are fewer arguments than specifiers, unmatched placeholders are left unchanged. Any arguments remaining after filling specifiers are returned as `data` (single value when one remains, otherwise an array).
+ *
+ * @param format - The format string containing zero or more specifiers
+ * @param args - Values to substitute into the format string; any unused values become the returned `data`
+ * @returns An object with the formatted `message` and optional `data` containing unused arguments
  */
 export function formatString(
   format: string,
-  ...args: any[]
-): { message: string; data?: any } {
+  ...args: unknown[]
+): { message: string; data?: unknown } {
   let message = format;
-  let data: any = undefined;
+  let data: unknown = undefined;
   let argIndex = 0;
 
-  // Replace format specifiers
   message = message.replace(/%([sdioOcf])/g, (match, specifier) => {
     if (argIndex >= args.length) {
-      return match; // Keep the specifier if no more args
+      return match;
     }
 
     const arg = args[argIndex++];
 
     switch (specifier) {
-      case 's': // string
+      case 's':
         return String(arg);
-      case 'd': // decimal
+      case 'd':
         return String(Number(arg) || 0);
-      case 'i': // integer
+      case 'i':
         return String(Math.floor(Number(arg)) || 0);
-      case 'o': // object (compact)
+      case 'o':
         return serializeForConsole(arg);
-      case 'O': // object (detailed)
+      case 'O':
         return JSON.stringify(arg, null, 2);
-      case 'c': // CSS style (ignored for now)
+      case 'c':
         return String(arg);
-      case 'f': // float
+      case 'f':
         return String(Number(arg) || 0);
       default:
         return String(arg);
     }
   });
 
-  // Any remaining args become data
   const remainingArgs = args.slice(argIndex);
   if (remainingArgs.length > 0) {
     data = remainingArgs.length === 1 ? remainingArgs[0] : remainingArgs;
@@ -101,29 +118,34 @@ export function formatString(
 }
 
 /**
- * Process console arguments with format string support
- * @deprecated Use processConsoleArgs() instead - format string support is now built-in
+ * Serializes an arbitrary value to a concise string suitable for console output.
+ *
+ * For null/undefined returns the literal `"null"`/`"undefined"`. For objects:
+ * - If the object defines a custom `toString()` (i.e., not `Object.prototype.toString`), that value is returned.
+ * - Otherwise the object is JSON-stringified; strings longer than 100 characters are truncated to 97 characters plus `...`.
+ * - If stringification throws, returns `"[Object]"`.
+ * For non-objects returns `String(obj)`.
+ *
+ * @param obj - The value to serialize for console display.
+ * @returns A short, human-readable string representation of `obj`.
  */
-export const processConsoleArgsWithFormatting = processConsoleArgs;
-
-/**
- * Serialize an object for console-like display
- */
-export function serializeForConsole(obj: any): string {
+export function serializeForConsole(obj: unknown): string {
   if (obj === null) return 'null';
   if (obj === undefined) return 'undefined';
 
   if (typeof obj === 'object') {
     try {
-      // Try to get a meaningful string representation
-      if (obj.toString && obj.toString !== Object.prototype.toString) {
-        return obj.toString();
+      if (
+        obj &&
+        typeof (obj as Record<string, unknown>).toString === 'function' &&
+        (obj as Record<string, unknown>).toString !== Object.prototype.toString
+      ) {
+        return (obj as { toString(): string }).toString();
       }
 
-      // For arrays and objects, use JSON but limit length
       const json = JSON.stringify(obj);
       if (json.length > 100) {
-        return json.substring(0, 97) + '...';
+        return `${json.substring(0, 97)}...`;
       }
       return json;
     } catch {

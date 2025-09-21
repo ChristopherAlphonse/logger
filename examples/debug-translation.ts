@@ -4,7 +4,18 @@ import { Logger } from '../src/logger';
 import { LogLevel } from '../src/types';
 
 /**
- * Debug test for AI translation
+ * Run an interactive debug routine that exercises the logger's AI translation features.
+ *
+ * Performs a health check, retrieves AI statistics, attempts a direct translation via the logger's
+ * internal AI service (accessed reflectively), emits a test ERROR log through the logger, and
+ * waits 10 seconds to allow asynchronous translation/processing to complete.
+ *
+ * Notes:
+ * - If the AI health check fails the function returns early and no further steps are executed.
+ * - The function writes progress and results to the console and uses the Logger instance configured
+ *   with AI translation enabled.
+ *
+ * @returns A promise that resolves when the debug routine completes.
  */
 
 async function debugTranslation() {
@@ -69,11 +80,11 @@ async function debugTranslation() {
 
   // Wait and see what happens
   console.log('   Waiting 10 seconds...');
-  await new Promise(resolve => setTimeout(resolve, 10000));
+  await new Promise((resolve) => setTimeout(resolve, 10000));
 
   console.log('\nDebug test completed!');
 }
 
-debugTranslation().catch(error => {
+debugTranslation().catch((error) => {
   console.error('Debug test failed:', error);
 });

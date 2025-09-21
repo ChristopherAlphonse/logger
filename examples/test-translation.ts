@@ -4,7 +4,20 @@ import { Logger } from '../src/logger';
 import { LogLevel } from '../src/types';
 
 /**
- * Simple test for Ollama log translation
+ * Runs a self-contained test of Ollama-based log translation using the project's Logger.
+ *
+ * Checks the configured AI service health, prints setup instructions and returns early if the AI is unavailable.
+ * If healthy, emits three test log entries:
+ * 1) an ERROR-level message that should be translated,
+ * 2) a WARN-level message that should be translated,
+ * 3) an INFO-level message that should not be translated (not included in translateLogLevels).
+ *
+ * Side effects:
+ * - Writes status and progress to stdout via console.log.
+ * - Emits logs via the Logger instance which may trigger asynchronous translation requests.
+ * - Waits ~5 seconds after each translated test entry to allow asynchronous translation to complete.
+ *
+ * Intended for manual/local testing; requires an Ollama server (configured in the Logger) to be running for translation to occur.
  */
 
 async function testTranslation() {
@@ -49,7 +62,7 @@ async function testTranslation() {
 
   // Wait for async translation
   console.log('   Waiting for translation...');
-  await new Promise(resolve => setTimeout(resolve, 5000));
+  await new Promise((resolve) => setTimeout(resolve, 5000));
 
   // This should be translated (WARN level)
   console.log('\n2. Testing WARN level translation:');
@@ -57,7 +70,7 @@ async function testTranslation() {
 
   // Wait for async translation
   console.log('   Waiting for translation...');
-  await new Promise(resolve => setTimeout(resolve, 5000));
+  await new Promise((resolve) => setTimeout(resolve, 5000));
 
   // This should NOT be translated (INFO level not in translateLogLevels)
   console.log('\n3. Testing INFO level (should not be translated):');

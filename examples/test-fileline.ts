@@ -1,5 +1,16 @@
-import { Logger, EnhancedLogger } from '../src';
+import { EnhancedLogger, Logger } from '../src';
 
+/**
+ * Exercises Logger and EnhancedLogger methods to validate console compatibility and file:line reporting.
+ *
+ * Runs a series of logging calls (info, warn, error), console-compatible methods (`logConsole`, `errorConsole`),
+ * and an error throw/catch fed to the enhanced logger for analysis. Intended to demonstrate and compare:
+ * - traditional console-style output vs. the project's logger
+ * - file:line reporting (new logger) instead of timestamps
+ *
+ * Side effects:
+ * - Writes multiple log entries to the console (via the logger implementations and direct console.log).
+ */
 function testConsoleCompatibility() {
   const logger = new Logger();
   const enhancedLogger = new EnhancedLogger();

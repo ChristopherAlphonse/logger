@@ -1,4 +1,5 @@
-import { createHash } from 'crypto';
+import CryptoJS from 'crypto-js';
+import { CACHE_CONSTANTS, TIME_CONSTANTS } from './constants';
 import type { AIInsight, IAICache } from './types';
 
 interface CacheEntry {
@@ -27,7 +28,10 @@ export class AICache implements IAICache {
   private maxSize: number;
   private defaultTTL: number;
 
-  constructor(maxSize = 1000, defaultTTL = 60 * 60 * 1000) {
+  constructor(
+    maxSize = CACHE_CONSTANTS.DEFAULT_MAX_SIZE,
+    defaultTTL = CACHE_CONSTANTS.DEFAULT_TTL
+  ) {
     this.maxSize = maxSize;
     this.defaultTTL = defaultTTL;
   }
@@ -41,7 +45,6 @@ export class AICache implements IAICache {
       return null;
     }
 
-    // Check if entry has expired
     if (Date.now() > entry.timestamp + entry.ttl) {
       this.cache.delete(key);
       this.cacheStats.misses++;
@@ -49,15 +52,12 @@ export class AICache implements IAICache {
       return null;
     }
 
-    // Update timestamp for LRU eviction (mark as recently used)
     entry.timestamp = Date.now();
-
     this.cacheStats.hits++;
     return entry.insight;
   }
 
   async set(key: string, insight: AIInsight, ttl?: number): Promise<void> {
-    // Evict if cache is full
     if (this.cache.size >= this.maxSize) {
       this.evictLRU();
     }
@@ -123,17 +123,14 @@ export class AICache implements IAICache {
     }
   }
 
-  static generateErrorKey(
-    error: Error,
-    context?: Record<string, unknown>
-  ): string {
+  static generateErrorKey(error: Error, context?: Record<string, unknown>): string {
     const data = {
       message: error.message,
       name: error.name,
       stack: error.stack,
       context,
     };
-    return createHash('md5').update(JSON.stringify(data)).digest('hex');
+    return CryptoJS.MD5(JSON.stringify(data)).toString();
   }
 
   static generateStackTraceKey(
@@ -148,11 +145,11 @@ export class AICache implements IAICache {
       frames: stackFrames,
       context,
     };
-    return createHash('md5').update(JSON.stringify(data)).digest('hex');
+    return CryptoJS.MD5(JSON.stringify(data)).toString();
   }
 
   static generateCustomKey(data: string): string {
-    return createHash('md5').update(data).digest('hex');
+    return CryptoJS.MD5(data).toString();
   }
 
   async preloadCommonPatterns(): Promise<void> {
@@ -171,21 +168,16 @@ export class AICache implements IAICache {
         likelyCauses: ['Undefined variable', 'Missing property'],
         suggestedFix: 'Check variable initialization',
         contextualInsights: ['Ensure proper variable scope'],
-        confidence: 2, // HIGH
+        confidence: 2,
         processingTime: 0,
         cached: true,
       };
-      await this.set(key, mockInsight, 24 * 60 * 60 * 1000); // 24 hours
+      await this.set(key, mockInsight, TIME_CONSTANTS.ONE_DAY);
     }
   }
 
-  private generateCommonErrorKey(
-    errorType: string,
-    messagePattern: string
-  ): string {
-    return createHash('md5')
-      .update(`${errorType}:${messagePattern}`)
-      .digest('hex');
+  private generateCommonErrorKey(errorType: string, messagePattern: string): string {
+    return CryptoJS.MD5(`${errorType}:${messagePattern}`).toString();
   }
 
   getEfficiencyMetrics(): {
@@ -197,9 +189,7 @@ export class AICache implements IAICache {
     const total = this.cacheStats.hits + this.cacheStats.misses;
     const hitRate = total > 0 ? this.cacheStats.hits / total : 0;
     const averageHitsPerEntry =
-      this.cacheStats.size > 0
-        ? this.cacheStats.hits / this.cacheStats.size
-        : 0;
+      this.cacheStats.size > 0 ? this.cacheStats.hits / this.cacheStats.size : 0;
     const cacheUtilization = this.cacheStats.size / this.maxSize;
     const evictionRate =
       this.cacheStats.totalRequests > 0
@@ -217,16 +207,19 @@ export class AICache implements IAICache {
   optimize(): void {
     this.cleanup();
 
-    // If cache utilization is low, reduce max size
-    if (this.cacheStats.size < this.maxSize * 0.3) {
-      this.maxSize = Math.max(100, Math.floor(this.maxSize * 0.8));
+    if (this.cacheStats.size < this.maxSize * CACHE_CONSTANTS.LOW_UTILIZATION_THRESHOLD) {
+      this.maxSize = Math.max(
+        CACHE_CONSTANTS.MIN_CACHE_SIZE,
+        Math.floor(this.maxSize * CACHE_CONSTANTS.CACHE_SHRINK_FACTOR)
+      );
     }
 
-    // If eviction rate is high, increase max size
-    const evictionRate =
-      this.cacheStats.evictions / Math.max(1, this.cacheStats.totalRequests);
-    if (evictionRate > 0.1) {
-      this.maxSize = Math.min(10000, Math.floor(this.maxSize * 1.2));
+    const evictionRate = this.cacheStats.evictions / Math.max(1, this.cacheStats.totalRequests);
+    if (evictionRate > CACHE_CONSTANTS.HIGH_EVICTION_THRESHOLD) {
+      this.maxSize = Math.min(
+        CACHE_CONSTANTS.MAX_CACHE_SIZE,
+        Math.floor(this.maxSize * CACHE_CONSTANTS.CACHE_GROW_FACTOR)
+      );
     }
   }
 }

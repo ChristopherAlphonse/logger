@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 
-import { ConfigManager } from './src/config-manager';
+import { join } from 'node:path';
 import { EnhancedAIService } from '../src/enhanced-ai-service';
-import { join } from 'path';
+import { ConfigManager } from './src/config-manager';
 
 /**
  * Setup script for AI-powered logging

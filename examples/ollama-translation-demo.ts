@@ -4,15 +4,18 @@ import { Logger } from '../src/logger';
 import { LogLevel } from '../src/types';
 
 /**
- * Demo of Ollama-powered log translation features
+ * Runs a demo that showcases Ollama-powered translation of technical log messages into human-readable explanations.
+ *
+ * The function configures a Logger with AI translation settings (using Ollama), checks the AI service health,
+ * enables or disables log translation accordingly, and emits several example logs (errors, warnings, info, debug)
+ * to demonstrate translated vs. standard output.
  *
  * Prerequisites:
  * 1. Install Ollama: https://ollama.ai
- * 2. Run: ollama pull llama3.2:3b
- * 3. Start Ollama service: ollama serve
+ * 2. Pull the model: `ollama pull llama3.2:3b`
+ * 3. Start the service: `ollama serve`
  *
- * This demo shows how technical log messages can be automatically
- * translated into human-readable explanations using Ollama.
+ * @returns A promise that resolves when the demo has finished emitting example logs and reporting AI translation stats.
  */
 
 async function main() {
@@ -40,9 +43,7 @@ async function main() {
 
   // Check if AI service is available
   const isAIHealthy = await logger.isAIHealthy();
-  console.log(
-    `🔍 AI Service Status: ${isAIHealthy ? '✅ Available' : '❌ Unavailable'}`
-  );
+  console.log(`🔍 AI Service Status: ${isAIHealthy ? '✅ Available' : '❌ Unavailable'}`);
 
   if (!isAIHealthy) {
     console.log('\n📋 To enable Ollama translation:');
@@ -59,13 +60,11 @@ async function main() {
     logger.enableLogTranslation();
   }
 
-  console.log('\n' + '='.repeat(50));
+  console.log(`\n${'='.repeat(50)}`);
 
   // Example 1: Database connection error
   console.log('\n📊 Example 1: Database Connection Error');
-  logger.error(
-    'Connection timeout after 5000ms to database server mysql://localhost:3306/myapp'
-  );
+  logger.error('Connection timeout after 5000ms to database server mysql://localhost:3306/myapp');
 
   // Wait a moment for translation to complete
   await sleep(2000);
@@ -104,12 +103,11 @@ async function main() {
 
   // Example 6: Debug message (should not be translated by default)
   console.log('\n📊 Example 6: Debug Message (not translated)');
-  logger.debug(
-    'Executing SQL query: SELECT * FROM users WHERE last_login > ?',
-    { params: ['2025-08-01'] }
-  );
+  logger.debug('Executing SQL query: SELECT * FROM users WHERE last_login > ?', {
+    params: ['2025-08-01'],
+  });
 
-  console.log('\n' + '='.repeat(50));
+  console.log(`\n${'='.repeat(50)}`);
   console.log(
     '\n✨ Demo completed! Technical logs have been translated to human-readable explanations.'
   );
@@ -124,12 +122,20 @@ async function main() {
   }
 }
 
+/**
+ * Asynchronously pauses execution for the specified duration.
+ *
+ * Useful for delaying async flows (e.g., waiting between demo log examples).
+ *
+ * @param ms - Delay duration in milliseconds.
+ * @returns A promise that resolves once the delay has elapsed.
+ */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // Handle errors gracefully
-main().catch(error => {
+main().catch((error) => {
   console.error('❌ Demo failed:', error);
   process.exit(1);
 });
