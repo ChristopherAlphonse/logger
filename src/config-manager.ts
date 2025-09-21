@@ -1,10 +1,74 @@
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
-import { request } from 'http';
 import type { AIConfig } from './types';
-
 import { createInternalLogger } from './internalLogger';
+
+declare const window: any;
+declare const localStorage: any;
+
+const browserFS = {
+  readFileSync: (path: string, encoding: string) => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const key = `logger-config-${path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      return localStorage.getItem(key) || '{}';
+    }
+    return '{}';
+  },
+  writeFileSync: (path: string, data: string, encoding: string) => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const key = `logger-config-${path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      localStorage.setItem(key, data);
+    }
+  },
+  existsSync: (path: string) => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const key = `logger-config-${path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      return localStorage.getItem(key) !== null;
+    }
+    return false;
+  },
+};
+
+const browserPath = {
+  join: (...paths: string[]) => paths.join('/').replace(/\/+/g, '/'),
+};
+
+const browserOS = {
+  homedir: () => {
+    if (typeof window !== 'undefined') {
+      return '/home/user';
+    }
+    return typeof process !== 'undefined' && process.env
+      ? process.env.HOME || process.env.USERPROFILE || '/home/user'
+      : '/home/user';
+  },
+};
+
+let fs: typeof browserFS;
+let path: typeof browserPath;
+let os: typeof browserOS;
+
+try {
+  if (typeof window === 'undefined' && typeof process !== 'undefined') {
+    const nodeFS = require('fs');
+    const nodePath = require('path');
+    const nodeOS = require('os');
+
+    fs = {
+      readFileSync: nodeFS.readFileSync,
+      writeFileSync: nodeFS.writeFileSync,
+      existsSync: nodeFS.existsSync,
+    };
+    path = { join: nodePath.join };
+    os = { homedir: nodeOS.homedir };
+  } else {
+    fs = browserFS;
+    path = browserPath;
+    os = browserOS;
+  }
+} catch (error) {
+  fs = browserFS;
+  path = browserPath;
+  os = browserOS;
+}
 
 const internalLogger = createInternalLogger('[CONFIG]');
 
@@ -49,14 +113,14 @@ export interface LoggerAIConfig {
 const DEFAULT_CONFIG: LoggerAIConfig = {
   ai: {
     enabled: true,
-    provider: 'ollama', // Default to free local Ollama
+    provider: 'ollama',
     apiKey: '',
     caching: true,
-    confidenceThreshold: 1, // MEDIUM confidence
+    confidenceThreshold: 1,
     maxInsightLength: 500,
     timeout: 10000,
-    translateLogs: false, // Disabled by default
-    translateLogLevels: [0, 1], // ERROR and WARN levels by default
+    translateLogs: false,
+    translateLogLevels: [0, 1],
     ollama: {
       baseUrl: 'http://localhost:11434',
       model: 'llama3.2:3b',
@@ -74,7 +138,7 @@ const DEFAULT_CONFIG: LoggerAIConfig = {
       maxTokens: 1000,
     },
     prompts: {
-      logTranslation: undefined, // Will use default prompt
+      logTranslation: undefined,
     },
     rateLimit: {
       maxRequestsPerMinute: 60,
@@ -84,7 +148,7 @@ const DEFAULT_CONFIG: LoggerAIConfig = {
   cache: {
     enabled: true,
     maxSize: 1000,
-    ttl: 60 * 60 * 1000, // 1 hour
+    ttl: 60 * 60 * 1000,
     persistToDisk: false,
   },
 };
@@ -107,21 +171,20 @@ export class ConfigManager {
   }
 
   private getConfigPath(): string {
-    // Try local config first, then global
-    const localConfig = join(process.cwd(), '.logger-ai.config.json');
-    const globalConfig = join(homedir(), '.logger-ai.config.json');
+    const cwd =
+      typeof process !== 'undefined' && process.cwd ? process.cwd() : '/';
+    const localConfig = path.join(cwd, '.logger-ai.config.json');
+    const globalConfig = path.join(os.homedir(), '.logger-ai.config.json');
 
-    return existsSync(localConfig) ? localConfig : globalConfig;
+    return fs.existsSync(localConfig) ? localConfig : globalConfig;
   }
 
   private loadConfig(): LoggerAIConfig {
     try {
-      if (existsSync(this.configPath)) {
-        const fileContent = readFileSync(this.configPath, 'utf-8');
+      if (fs.existsSync(this.configPath)) {
+        const fileContent = fs.readFileSync(this.configPath, 'utf-8');
 
-        // Validate file size (prevent DoS)
         if (fileContent.length > 100000) {
-          // 100KB limit
           internalLogger.warn('Config file too large, using defaults', {
             configPath: this.configPath,
           });
@@ -130,7 +193,6 @@ export class ConfigManager {
 
         const userConfig = JSON.parse(fileContent);
 
-        // Validate config structure
         if (!this.isValidConfig(userConfig)) {
           internalLogger.warn('Invalid config structure, using defaults', {
             configPath: this.configPath,
@@ -155,12 +217,10 @@ export class ConfigManager {
   ): LoggerAIConfig {
     const merged = { ...defaultConfig };
 
-    // Merge AI config
     if (userConfig.ai) {
       merged.ai = {
         ...merged.ai,
         ...userConfig.ai,
-        // Deep merge provider-specific configs
         ollama: { ...merged.ai.ollama, ...userConfig.ai.ollama },
         openai: { ...merged.ai.openai, ...userConfig.ai.openai },
         claude: { ...merged.ai.claude, ...userConfig.ai.claude },
@@ -173,7 +233,6 @@ export class ConfigManager {
       };
     }
 
-    // Merge cache config
     if (userConfig.cache) {
       merged.cache = { ...merged.cache, ...userConfig.cache };
     }
@@ -196,7 +255,7 @@ export class ConfigManager {
   saveConfig(): void {
     try {
       const configData = JSON.stringify(this.config, null, 2);
-      writeFileSync(this.configPath, configData, 'utf-8');
+      fs.writeFileSync(this.configPath, configData, 'utf-8');
     } catch (error) {
       internalLogger.error(
         `Failed to save AI logger config to ${this.configPath}`,
@@ -246,12 +305,13 @@ export class ConfigManager {
       },
     };
 
-    const targetPath =
-      filePath || join(process.cwd(), '.logger-ai.config.json');
+    const cwd =
+      typeof process !== 'undefined' && process.cwd ? process.cwd() : '/';
+    const targetPath = filePath || path.join(cwd, '.logger-ai.config.json');
 
     try {
       const configData = JSON.stringify(sampleConfig, null, 2);
-      writeFileSync(targetPath, configData, 'utf-8');
+      fs.writeFileSync(targetPath, configData, 'utf-8');
       internalLogger.info(`Sample AI logger config created at: ${targetPath}`);
       internalLogger.info('\nGetting started with FREE AI logging:');
       internalLogger.info('1. Install Ollama: https://ollama.ai');

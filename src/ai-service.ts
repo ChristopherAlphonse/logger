@@ -8,17 +8,36 @@ import { ConfidenceLevel, LogLevel } from './types';
 
 import { AICache } from './ai-cache';
 import { ConfigManager } from './config-manager';
-import { Ollama } from 'ollama';
-import OpenAI from 'openai';
 import { createInternalLogger } from './internalLogger';
 
+declare const window: any;
+
 const internalLogger = createInternalLogger('[AI-SERVICE]');
+
+let Ollama: any = null;
+let OpenAI: any = null;
+
+if (typeof window === 'undefined' && typeof process !== 'undefined') {
+  try {
+    const ollamaModule = require('ollama');
+    Ollama = ollamaModule.Ollama;
+  } catch (error) {
+    // Ollama not available
+  }
+
+  try {
+    const openaiModule = require('openai');
+    OpenAI = openaiModule.default || openaiModule;
+  } catch (error) {
+    // OpenAI not available
+  }
+}
 
 export class AIService implements IAIService {
   private configManager: ConfigManager;
   private cache: AICache;
-  private ollama: Ollama | null = null;
-  private openai: OpenAI | null = null;
+  private ollama: any = null;
+  private openai: any = null;
   private requestCount = 0;
   private requestTimes: number[] = [];
 
@@ -28,27 +47,45 @@ export class AIService implements IAIService {
     this.initialize();
   }
 
-  private async initialize(): Promise<void> {
+  private initialize(): void {
     const config = this.configManager.getAIConfig();
+
+    if (typeof window !== 'undefined') {
+      internalLogger.info('AI features disabled in browser environment');
+      return;
+    }
 
     switch (config.provider) {
       case 'ollama':
-        this.ollama = new Ollama({
-          host: config.ollama?.baseUrl || 'http://localhost:11434',
-        });
+        if (Ollama) {
+          this.ollama = new Ollama({
+            host: config.ollama?.baseUrl || 'http://localhost:11434',
+          });
+        } else {
+          internalLogger.warn('Ollama not available - AI features disabled');
+        }
         break;
       case 'openai':
-        if (config.openai?.apiKey) {
+        if (config.openai?.apiKey && OpenAI) {
           this.openai = new OpenAI({
             apiKey: config.openai.apiKey,
             organization: config.openai.organization,
           });
+        } else {
+          internalLogger.warn(
+            'OpenAI not available or no API key - AI features disabled'
+          );
         }
         break;
       case 'claude':
-        throw new Error(
+        internalLogger.warn(
           'Claude integration not yet available. Use "ollama" or "openai" instead.'
         );
+        break;
+      case 'disabled':
+        break;
+      default:
+        internalLogger.warn(`Unknown AI provider: ${config.provider}`);
     }
   }
 

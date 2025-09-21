@@ -67,29 +67,33 @@ export class Logger implements ILogger {
   constructor(config: LoggerConfig = {}) {
     this.config = {
       level: LogLevel.INFO,
-      timestamps: false, // Changed: Disable timestamps by default
+      timestamps: false,
       colors: true,
       timestampFormat: 'HH:mm:ss',
-      showSource: true, // Changed: Enable source tracking by default (file:line)
+      showSource: true,
       prefix: '',
       json: false,
-      output: process.stdout,
+      output:
+        typeof process !== 'undefined' && process.stdout
+          ? process.stdout
+          : { write: console.log },
       ...config,
     };
 
-    // Validate output stream for security
     if (this.config.output && !this.isValidOutputStream(this.config.output)) {
       const internalLogger = createInternalLogger('[LOGGER]');
       internalLogger.warn(
         'Invalid output stream provided in configuration. Falling back to process.stdout. Please check your logger configuration.'
       );
-      this.config.output = process.stdout;
+      this.config.output =
+        typeof process !== 'undefined' && process.stdout
+          ? process.stdout
+          : { write: console.log };
     }
 
     this.formatter = new LogFormatter();
     this.configManager = ConfigManager.getInstance();
 
-    // Update AI configuration if provided
     if (config.ai) {
       this.configManager.updateConfig({
         ai: {
@@ -195,13 +199,11 @@ export class Logger implements ILogger {
       return;
     }
 
-    // If AI translation is enabled, translate the message first
     if (this.shouldTranslateLog(level)) {
       this.logWithTranslation(level, message, data);
       return;
     }
 
-    // Standard logging without translation
     this.logDirect(level, message, data);
   }
 
@@ -233,10 +235,8 @@ export class Logger implements ILogger {
     message: string,
     data?: LogData
   ): Promise<void> {
-    // First, always log the original message
     this.logDirect(level, message, data);
 
-    // Then attempt to get AI translation and display it as additional context
     try {
       if (this.aiService) {
         const translatedMessage = await this.aiService.translateLog(
@@ -245,13 +245,11 @@ export class Logger implements ILogger {
           data
         );
 
-        // Only show translation if it's different from the original
         if (translatedMessage && translatedMessage !== message) {
           this.displayAITranslation(translatedMessage, level);
         }
       }
     } catch (error) {
-      // Silently fail - original message was already logged
       const internalLogger = createInternalLogger('[LOGGER]');
       internalLogger.warn('Log translation failed', {
         error,
@@ -269,23 +267,21 @@ export class Logger implements ILogger {
   ): void {
     const prefix = this.config.prefix ? `[${this.config.prefix}] ` : '';
 
-    // Simple colored output without accessing formatter internals
     if (this.config.colors) {
-      // Use basic ANSI color codes for the translation
       let colorCode = '';
       switch (level) {
         case LogLevel.ERROR:
-          colorCode = '\x1b[91m'; // Bright red
+          colorCode = '\x1b[91m';
           break;
         case LogLevel.WARN:
-          colorCode = '\x1b[93m'; // Bright yellow
+          colorCode = '\x1b[93m';
           break;
         case LogLevel.INFO:
-          colorCode = '\x1b[94m'; // Bright blue
+          colorCode = '\x1b[94m';
           break;
         case LogLevel.DEBUG:
         case LogLevel.TRACE:
-          colorCode = '\x1b[90m'; // Gray
+          colorCode = '\x1b[90m';
           break;
       }
       const resetCode = '\x1b[0m';
@@ -621,7 +617,11 @@ export class Logger implements ILogger {
    * Write output to the configured stream
    */
   private write(output: string): void {
-    const stream = this.config.output || process.stdout;
+    const stream =
+      this.config.output ||
+      (typeof process !== 'undefined' && process.stdout
+        ? process.stdout
+        : { write: console.log });
     stream.write(output);
   }
 
@@ -741,7 +741,11 @@ export class Logger implements ILogger {
    * Display AI insight in a formatted way
    */
   private displayAIInsight(insight: AIInsight): void {
-    const output = this.config.output?.write || process.stdout.write;
+    const defaultOutput =
+      typeof process !== 'undefined' && process.stdout
+        ? process.stdout.write
+        : console.log;
+    const output = this.config.output?.write || defaultOutput;
 
     // Apply color formatting conditionally
     const header = this.config.colors
@@ -870,7 +874,11 @@ export class Logger implements ILogger {
     if (typeof stream.write !== 'function') return false;
 
     // Allow standard streams
-    if (stream === process.stdout || stream === process.stderr) return true;
+    if (
+      typeof process !== 'undefined' &&
+      (stream === process.stdout || stream === process.stderr)
+    )
+      return true;
 
     // Allow file streams and other writable streams with proper constructor
     if (stream.constructor && stream.constructor.name) {

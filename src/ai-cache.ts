@@ -1,5 +1,24 @@
-import { createHash } from 'crypto';
 import type { AIInsight, IAICache } from './types';
+import CryptoJS from 'crypto-js';
+
+function createHash(algorithm: string) {
+  if (algorithm !== 'md5') {
+    throw new Error(`Unsupported hash algorithm: ${algorithm}`);
+  }
+
+  return {
+    update(data: string) {
+      return {
+        digest(encoding: string) {
+          if (encoding !== 'hex') {
+            throw new Error(`Unsupported encoding: ${encoding}`);
+          }
+          return CryptoJS.MD5(data).toString();
+        },
+      };
+    },
+  };
+}
 
 interface CacheEntry {
   insight: AIInsight;
@@ -41,7 +60,6 @@ export class AICache implements IAICache {
       return null;
     }
 
-    // Check if entry has expired
     if (Date.now() > entry.timestamp + entry.ttl) {
       this.cache.delete(key);
       this.cacheStats.misses++;
@@ -49,15 +67,12 @@ export class AICache implements IAICache {
       return null;
     }
 
-    // Update timestamp for LRU eviction (mark as recently used)
     entry.timestamp = Date.now();
-
     this.cacheStats.hits++;
     return entry.insight;
   }
 
   async set(key: string, insight: AIInsight, ttl?: number): Promise<void> {
-    // Evict if cache is full
     if (this.cache.size >= this.maxSize) {
       this.evictLRU();
     }
@@ -171,11 +186,11 @@ export class AICache implements IAICache {
         likelyCauses: ['Undefined variable', 'Missing property'],
         suggestedFix: 'Check variable initialization',
         contextualInsights: ['Ensure proper variable scope'],
-        confidence: 2, // HIGH
+        confidence: 2,
         processingTime: 0,
         cached: true,
       };
-      await this.set(key, mockInsight, 24 * 60 * 60 * 1000); // 24 hours
+      await this.set(key, mockInsight, 24 * 60 * 60 * 1000);
     }
   }
 
@@ -217,12 +232,10 @@ export class AICache implements IAICache {
   optimize(): void {
     this.cleanup();
 
-    // If cache utilization is low, reduce max size
     if (this.cacheStats.size < this.maxSize * 0.3) {
       this.maxSize = Math.max(100, Math.floor(this.maxSize * 0.8));
     }
 
-    // If eviction rate is high, increase max size
     const evictionRate =
       this.cacheStats.evictions / Math.max(1, this.cacheStats.totalRequests);
     if (evictionRate > 0.1) {
