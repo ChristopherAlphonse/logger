@@ -169,10 +169,10 @@ export class Logger implements ILogger {
           break;
       }
       const resetCode = '\x1b[0m';
-      const output = `${prefix}💡: ${colorCode}${translatedMessage}${resetCode}\n`;
+      const output = `${prefix}💡 AI Translation: ${colorCode}${translatedMessage}${resetCode}\n`;
       this.write(output);
     } else {
-      const output = `${prefix} 💡: ${translatedMessage}\n`;
+      const output = `${prefix}💡 AI Translation: ${translatedMessage}\n`;
       this.write(output);
     }
   }
@@ -470,7 +470,7 @@ export class Logger implements ILogger {
         'Socket',
         'PassThrough',
         'Transform',
-        'Object',
+        'Object', // Allow test mocks
       ];
       return validConstructors.includes(stream.constructor.name);
     }
