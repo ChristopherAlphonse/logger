@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-09-21
+
+### Added
+
+- **Enhanced Table Safety**: Robust serialization for `logger.table()` method
+  - Safe handling of BigInt values (converted to string with 'n' suffix)
+  - Circular reference detection and protection 
+  - Special object type handling (Date, Error, Map, Set, etc.)
+  - Graceful fallback for serialization errors
+  - Prevents crashes when logging complex data structures
+
+### Fixed
+
+- **Code Quality**: Resolved all Biome linting issues for enterprise-grade code
+  - Fixed constructor variable shadowing by renaming to `constructorName`
+  - Reduced cognitive complexity by refactoring into smaller, focused functions
+  - Replaced banned `Function` type with proper function signatures
+  - Improved code readability with dot notation over bracket notation
+
+- **CI/CD Improvements**: Enhanced auto-release workflow reliability
+  - Added `[skip ci]` protection to prevent infinite loops
+  - Improved git synchronization and conflict resolution
+  - Enhanced workflow concurrency controls
+  - Better error handling and rollback procedures
+
+### Technical Improvements
+
+- **Modular Safety Functions**: Created focused helper methods for better maintainability
+  - `convertObjectToString()` - handles object conversion with circular protection
+  - `getObjectTypeString()` - identifies and formats specific object types  
+  - `valueToString()` - simplified main conversion coordinator
+  - `safeStringifyObject()` - comprehensive object serialization with fallbacks
+
+- **Type Safety**: Enhanced TypeScript support
+  - Proper function type annotations replacing generic `Function` type
+  - Better type inference for complex object structures
+  - Improved error handling with specific type guards
+
+### Developer Experience
+
+- **Build Pipeline**: All checks pass without warnings
+  - ✅ Biome linting (0 errors, 0 warnings)
+  - ✅ TypeScript compilation 
+  - ✅ 119 test cases passing
+  - ✅ Vite production build
+
 ## [1.1.0] - 2025-01-27
 
 ### Added
