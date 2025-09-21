@@ -198,7 +198,9 @@ describe('Logger', () => {
         level: LogLevel.INFO,
       });
 
-      expect(() => testLogger.info('Test message', { key: 'value' })).not.toThrow();
+      expect(() =>
+        testLogger.info('Test message', { key: 'value' })
+      ).not.toThrow();
     });
 
     test('should handle JSON output with complex data', () => {
@@ -219,7 +221,9 @@ describe('Logger', () => {
         date: new Date(),
       };
 
-      expect(() => testLogger.info('Complex data test', complexData)).not.toThrow();
+      expect(() =>
+        testLogger.info('Complex data test', complexData)
+      ).not.toThrow();
     });
   });
 
@@ -285,7 +289,9 @@ describe('Logger', () => {
       const circular: Record<string, unknown> = { name: 'test' };
       circular.self = circular;
 
-      expect(() => testLogger.info('Circular reference test', circular)).not.toThrow();
+      expect(() =>
+        testLogger.info('Circular reference test', circular)
+      ).not.toThrow();
     });
 
     test('should handle very long messages', () => {
@@ -348,7 +354,9 @@ describe('Logger', () => {
         colors: false,
         level: LogLevel.INFO,
       });
-      expect(() => testLogger.info('Test message', { key: 'value' })).not.toThrow();
+      expect(() =>
+        testLogger.info('Test message', { key: 'value' })
+      ).not.toThrow();
     });
 
     test('should handle JSON serialization errors gracefully', () => {
@@ -405,7 +413,9 @@ describe('Logger', () => {
         level: LogLevel.INFO,
       });
 
-      expect(() => testLogger.info('Test with invalid stack format')).not.toThrow();
+      expect(() =>
+        testLogger.info('Test with invalid stack format')
+      ).not.toThrow();
 
       global.Error = originalError;
     });
@@ -443,7 +453,9 @@ describe('Logger', () => {
         level: LogLevel.INFO,
       });
 
-      expect(() => testLogger.info('Test with problematic file paths')).not.toThrow();
+      expect(() =>
+        testLogger.info('Test with problematic file paths')
+      ).not.toThrow();
 
       global.Error = originalError;
     });
@@ -525,7 +537,7 @@ describe('Logger', () => {
         { name: 'Bob', age: 30 },
       ];
 
-      testLogger.table(LogLevel.INFO, data);
+      testLogger.table(data);
 
       expect(mockOutput.length).toBeGreaterThan(0);
       const output = mockOutput.join('');
@@ -546,7 +558,7 @@ describe('Logger', () => {
         { name: 'Bob', age: 30 },
       ];
 
-      testLogger.table(LogLevel.INFO, data, { border: false });
+      testLogger.table(data);
 
       expect(mockOutput.length).toBeGreaterThan(0);
       const output = mockOutput.join('');
@@ -563,7 +575,7 @@ describe('Logger', () => {
         { name: 'Bob', age: 30 },
       ];
 
-      testLogger.table(LogLevel.INFO, data, { headers: ['Person', 'Years'] });
+      testLogger.table(data);
 
       const output = mockOutput.join('');
       expect(output).toContain('Person');
@@ -573,14 +585,14 @@ describe('Logger', () => {
     });
 
     test('should handle empty data array', () => {
-      testLogger.table(LogLevel.INFO, []);
+      testLogger.table([]);
 
       const output = mockOutput.join('');
       expect(output).toContain('No data to display');
     });
 
     test('should handle null/undefined data', () => {
-      testLogger.table(LogLevel.INFO, null as unknown as Record<string, unknown>[]);
+      testLogger.table(null as unknown as Record<string, unknown>[]);
 
       const output = mockOutput.join('');
       expect(output).toContain('No data to display');
@@ -593,7 +605,7 @@ describe('Logger', () => {
         { name: 'Charlie', role: 'Designer' },
       ];
 
-      testLogger.table(LogLevel.INFO, data);
+      testLogger.table(data);
 
       const output = mockOutput.join('');
       expect(output).toContain('Alice');
@@ -615,7 +627,7 @@ describe('Logger', () => {
         },
       ];
 
-      testLogger.table(LogLevel.INFO, data);
+      testLogger.table(data);
 
       const output = mockOutput.join('');
       expect(output).toContain('text');
@@ -636,10 +648,10 @@ describe('Logger', () => {
 
       const data = [{ name: 'Alice', age: 25 }];
 
-      restrictedLogger.table(LogLevel.INFO, data);
+      restrictedLogger.table(data);
       expect(mockOutput.length).toBe(0);
 
-      restrictedLogger.table(LogLevel.WARN, data);
+      restrictedLogger.table(data);
       expect(mockOutput.length).toBeGreaterThan(0);
     });
 
@@ -655,7 +667,7 @@ describe('Logger', () => {
         { name: 'Bob', age: 30 },
       ];
 
-      jsonLogger.table(LogLevel.INFO, data);
+      jsonLogger.table(data);
 
       expect(mockOutput.length).toBe(1);
       const output = mockOutput[0];
@@ -677,7 +689,7 @@ describe('Logger', () => {
       });
 
       const data = [{ name: 'Alice', age: 25 }];
-      sourceLogger.table(LogLevel.INFO, data);
+      sourceLogger.table(data);
 
       const output = mockOutput.join('');
       expect(output).toMatch(/\[.*\..*:\d+\]/);
@@ -693,7 +705,7 @@ describe('Logger', () => {
       });
 
       const data = [{ name: 'Alice', age: 25 }];
-      prefixLogger.table(LogLevel.INFO, data);
+      prefixLogger.table(data);
 
       const output = mockOutput.join('');
       expect(output).toContain('[TEST]');
@@ -707,7 +719,7 @@ describe('Logger', () => {
         },
       ];
 
-      testLogger.table(LogLevel.INFO, data);
+      testLogger.table(data);
 
       const output = mockOutput.join('');
       expect(output).toContain('This is a very long string');
@@ -720,7 +732,7 @@ describe('Logger', () => {
         { 0: 'Bob', 1: 30, 2: 'Designer' },
       ];
 
-      expect(() => testLogger.table(LogLevel.INFO, data)).not.toThrow();
+      expect(() => testLogger.table(data)).not.toThrow();
     });
 
     test('should handle mixed object structures gracefully', () => {
@@ -729,7 +741,7 @@ describe('Logger', () => {
         { name: 'Bob', details: { age: 30, role: 'Designer' } },
       ];
 
-      expect(() => testLogger.table(LogLevel.INFO, data)).not.toThrow();
+      expect(() => testLogger.table(data)).not.toThrow();
 
       const output = mockOutput.join('');
       expect(output).toContain('Alice');
@@ -742,7 +754,7 @@ describe('Logger', () => {
         { name: 'Bob & Co.', symbol: '£', emoji: 'sparkles' },
       ];
 
-      expect(() => testLogger.table(LogLevel.INFO, data)).not.toThrow();
+      expect(() => testLogger.table(data)).not.toThrow();
 
       const output = mockOutput.join('');
       expect(output).toContain('Alice "Quote"');

@@ -1,8 +1,7 @@
 #!/usr/bin/env tsx
 
-import { join } from 'node:path';
-import { EnhancedAIService } from '../src/enhanced-ai-service';
 import { ConfigManager } from './src/config-manager';
+import { join } from 'node:path';
 
 /**
  * Setup script for AI-powered logging
@@ -11,7 +10,6 @@ import { ConfigManager } from './src/config-manager';
 async function main() {
   console.log('AI-Powered Logger Setup\n');
 
-  // Generate sample config
   console.log('Creating sample configuration...');
   const configPath = join(process.cwd(), '.logger-ai.config.json');
   ConfigManager.createSampleConfig(configPath);
@@ -52,7 +50,6 @@ try {
 }
   `);
 
-  // Test current configuration
   console.log('\nTesting current configuration...\n');
 
   try {
@@ -66,26 +63,7 @@ try {
       console.log(`Ollama URL: ${config.ollama?.baseUrl}`);
       console.log(`Model: ${config.ollama?.model}`);
     }
-
-    // Test AI service
-    const aiService = new EnhancedAIService();
-    const isHealthy = await aiService.isHealthy();
-
-    console.log(`AI Service: ${isHealthy ? 'Working' : 'Not available'}`);
-
-    if (!isHealthy && config.provider === 'ollama') {
-      console.log('\nOllama seems to be not running. To start it:');
-      console.log('   - Install Ollama from https://ollama.ai');
-      console.log('   - Run: ollama pull llama3.2:3b');
-      console.log('   - Start the Ollama service');
-    }
   } catch (error) {
-    console.log(`Configuration test failed: ${error}`);
+    console.error('Error testing current configuration:', error);
   }
-
-  console.log('\nSetup complete! Happy logging with AI insights!');
-}
-
-if (require.main === module) {
-  main().catch(console.error);
 }
