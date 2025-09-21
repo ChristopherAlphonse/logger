@@ -152,9 +152,9 @@ jobs:
 
       - name: Create success summary
         run: |
-          echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "##  Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Version:** v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Type:** ${{ steps.bump-type.outputs.type }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **NPM Published:** ${{ steps.npm-check.outputs.exists == 'false' && '✅ Yes' || '⚠️ Already exists' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **GitHub Release:** ✅ Created" >> $GITHUB_STEP_SUMMARY
-          echo "- **Changelog:** ✅ Updated" >> $GITHUB_STEP_SUMMARY
+          echo "- **NPM Published:** ${{ steps.npm-check.outputs.exists == 'false' && ' Yes' || ' Already exists' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **GitHub Release:**  Created" >> $GITHUB_STEP_SUMMARY
+          echo "- **Changelog:**  Updated" >> $GITHUB_STEP_SUMMARY
