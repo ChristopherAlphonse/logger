@@ -32,23 +32,23 @@ npm install @calphonse/logger
 ```typescript
 import { logger } from '@calphonse/logger';
 
-// Basic logging
+
 logger.info('Application started');
 logger.warn('High memory usage detected');
 logger.error('Database connection failed', { error: 'Connection timeout' });
 
-// Structured logging
+
 logger.info('User login', {
   userId: '12345',
   method: 'email',
   timestamp: new Date().toISOString(),
 });
 
-// AI error analysis (automatic)
+
 try {
   throw new Error('Invalid JWT token');
 } catch (error) {
-  logger.error('Auth failed', error); // Gets AI analysis
+  logger.error('Auth failed', error);
 }
 ```
 
@@ -127,7 +127,7 @@ logger.info(message: string, data?: any): void
 logger.debug(message: string, data?: any): void
 logger.trace(message: string, data?: any): void
 
-logger.table(data: any[]): void // Display data in table format
+logger.table(data: any[]): void 
 logger.child(prefix: string): Logger
 logger.setLevel(level: LogLevel): void
 ```
@@ -164,7 +164,7 @@ app.use((req, res, next) => {
 
 // Error handling with AI analysis
 app.use((err, req, res, next) => {
-  logger.error('Request failed', err); // AI analyzes the error
+  logger.error('Request failed', err); 
   res.status(500).json({ error: 'Internal server error' });
 });
 ```
@@ -177,39 +177,6 @@ app.use((err, req, res, next) => {
 - **Memory limits** prevent resource exhaustion
 - **Safe defaults** for all options
 
-## Automated Releases
-
-This project features automated releases:
-
-- **Auto-versioning** based on commit messages (`[major]`, `[minor]`, or patch)
-- **Changelog generation** with recent commits
-- **NPM publishing** when changes are merged
-- **GitHub releases** with tags and notes
-- **Branch protection compatible** - uses pull requests
-
-Simply merge to main, and releases happen automatically!
-
-## Development
-
-```bash
-git clone https://github.com/ChristopherAlphonse/logger.git
-cd logger
-pnpm install
-
-# Development
-pnpm dev          # Watch mode
-pnpm test         # Run tests
-pnpm build        # Build project
-pnpm quality      # Run all checks
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Run `pnpm quality` to ensure all checks pass
-5. Submit a pull request
 
 ## License
 
