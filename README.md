@@ -401,6 +401,18 @@ logger.table(users);
 logger.table(LogLevel.DEBUG, users, { border: false });
 ```
 
+## Automated Releases
+
+This project features **automated releases** that work seamlessly with branch protection rules:
+
+- **Auto-versioning** based on commit messages (`[major]`, `[minor]`, or patch)
+- **Changelog generation** with recent commits
+- **NPM publishing** when new versions are merged
+- **GitHub releases** with tags and release notes
+- **Branch protection compatible** - uses pull requests for all changes
+
+Simply merge your changes to main, and the release process handles the rest!
+
 ## Development
 
 ### Setup
