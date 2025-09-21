@@ -7,12 +7,7 @@ on:
 jobs:
   auto-release:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      !contains(github.event.head_commit.message, '[skip ci]')
-    concurrency:
-      group: auto-release
-      cancel-in-progress: false
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
@@ -119,23 +114,14 @@ jobs:
 
       - name: Commit version bump and changelog
         run: |
-          # Fetch latest changes from origin
-          git fetch origin
-
-          # Rebase onto latest main to ensure fast-forward push
-          git rebase origin/main
-
-          # Add changes and commit
           git add package.json CHANGELOG.md
           git commit -m "chore: release v${{ steps.version.outputs.version }} [skip ci]"
-
-          # Push with lease protection to avoid overwriting concurrent changes
-          git push --force-with-lease origin main
+          git push origin main
 
       - name: Create Git tag
         run: |
           git tag -a v${{ steps.version.outputs.version }} -m "Release v${{ steps.version.outputs.version }}"
-          git push --force-with-lease origin v${{ steps.version.outputs.version }}
+          git push origin v${{ steps.version.outputs.version }}
 
       - name: Check if version exists on npm
         id: npm-check
@@ -166,9 +152,9 @@ jobs:
 
       - name: Create success summary
         run: |
-          echo "##  Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Version:** v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Type:** ${{ steps.bump-type.outputs.type }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **NPM Published:** ${{ steps.npm-check.outputs.exists == 'false' && ' Yes' || ' Already exists' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **GitHub Release:**  Created" >> $GITHUB_STEP_SUMMARY
-          echo "- **Changelog:**  Updated" >> $GITHUB_STEP_SUMMARY
+          echo "- **NPM Published:** ${{ steps.npm-check.outputs.exists == 'false' && '✅ Yes' || '⚠️ Already exists' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **GitHub Release:** ✅ Created" >> $GITHUB_STEP_SUMMARY
+          echo "- **Changelog:** ✅ Updated" >> $GITHUB_STEP_SUMMARY
