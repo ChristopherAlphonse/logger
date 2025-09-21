@@ -68,6 +68,19 @@ jobs:
             echo "type=patch" >> $GITHUB_OUTPUT
           fi
 
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Sync with latest main
+        run: |
+          # Fetch latest changes from origin
+          git fetch origin
+          
+          # Rebase onto latest main before making any changes
+          git rebase origin/main
+
       - name: Bump version
         id: version
         run: |
@@ -107,18 +120,14 @@ jobs:
             echo "$CHANGELOG_ENTRY" > CHANGELOG.md
           fi
 
-      - name: Configure Git
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
       - name: Commit version bump and changelog
         run: |
+          # Add our changes and commit
           git add package.json CHANGELOG.md
           git commit -m "chore: release v${{ steps.version.outputs.version }} [skip ci]"
-          git push origin main
-
-      - name: Create Git tag
+          
+          # Push with lease protection to avoid overwriting concurrent changes
+          git push --force-with-lease origin main      - name: Create Git tag
         run: |
           git tag -a v${{ steps.version.outputs.version }} -m "Release v${{ steps.version.outputs.version }}"
           git push origin v${{ steps.version.outputs.version }}
@@ -152,7 +161,7 @@ jobs:
 
       - name: Create success summary
         run: |
-          echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "##  Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Version:** v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Type:** ${{ steps.bump-type.outputs.type }}" >> $GITHUB_STEP_SUMMARY
           echo "- **NPM Published:** ${{ steps.npm-check.outputs.exists == 'false' && '✅ Yes' || '⚠️ Already exists' }}" >> $GITHUB_STEP_SUMMARY
