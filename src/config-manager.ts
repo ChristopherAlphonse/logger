@@ -150,7 +150,8 @@ const DEFAULT_CONFIG: LoggerAIConfig = {
       logTranslation: undefined,
     },
     rateLimit: {
-      maxRequestsPerMinute: RATE_LIMIT_CONSTANTS.DEFAULT_MAX_REQUESTS_PER_MINUTE,
+      maxRequestsPerMinute:
+        RATE_LIMIT_CONSTANTS.DEFAULT_MAX_REQUESTS_PER_MINUTE,
       maxRequestsPerHour: RATE_LIMIT_CONSTANTS.DEFAULT_MAX_REQUESTS_PER_HOUR,
     },
   },
@@ -180,7 +181,8 @@ export class ConfigManager {
   }
 
   private getConfigPath(): string {
-    const cwd = typeof process !== 'undefined' && process.cwd ? process.cwd() : '/';
+    const cwd =
+      typeof process !== 'undefined' && process.cwd ? process.cwd() : '/';
     const localConfig = path.join(cwd, '.logger-ai.config.json');
     const globalConfig = path.join(os.homedir(), '.logger-ai.config.json');
 
@@ -211,10 +213,13 @@ export class ConfigManager {
         return this.mergeConfigs(DEFAULT_CONFIG, userConfig);
       }
     } catch (error) {
-      internalLogger.warn(`Failed to load AI logger config from ${this.configPath}`, {
-        error,
-        configPath: this.configPath,
-      });
+      internalLogger.warn(
+        `Failed to load AI logger config from ${this.configPath}`,
+        {
+          error,
+          configPath: this.configPath,
+        }
+      );
     }
     return DEFAULT_CONFIG;
   }
@@ -265,10 +270,13 @@ export class ConfigManager {
       const configData = JSON.stringify(this.config, null, 2);
       fs.writeFileSync(this.configPath, configData, 'utf-8');
     } catch (error) {
-      internalLogger.error(`Failed to save AI logger config to ${this.configPath}`, {
-        error,
-        configPath: this.configPath,
-      });
+      internalLogger.error(
+        `Failed to save AI logger config to ${this.configPath}`,
+        {
+          error,
+          configPath: this.configPath,
+        }
+      );
     }
   }
 
@@ -288,7 +296,8 @@ export class ConfigManager {
       },
     };
 
-    const cwd = typeof process !== 'undefined' && process.cwd ? process.cwd() : '/';
+    const cwd =
+      typeof process !== 'undefined' && process.cwd ? process.cwd() : '/';
     const targetPath = filePath || path.join(cwd, '.logger-ai.config.json');
 
     try {
@@ -365,7 +374,11 @@ export class ConfigManager {
   }
 
   private isValidAIConfig(configObj: Record<string, unknown>): boolean {
-    if (!configObj.ai || typeof configObj.ai !== 'object' || configObj.ai === null) {
+    if (
+      !configObj.ai ||
+      typeof configObj.ai !== 'object' ||
+      configObj.ai === null
+    ) {
       return true; // AI config is optional
     }
 
@@ -373,7 +386,8 @@ export class ConfigManager {
 
     if (!this.isValidProvider(aiConfig.provider)) return false;
     if (!this.isValidTimeout(aiConfig.timeout)) return false;
-    if (!this.isValidConfidenceThreshold(aiConfig.confidenceThreshold)) return false;
+    if (!this.isValidConfidenceThreshold(aiConfig.confidenceThreshold))
+      return false;
 
     return true;
   }
@@ -387,7 +401,9 @@ export class ConfigManager {
   private isValidTimeout(timeout: unknown): boolean {
     if (timeout === undefined) return true; // Timeout is optional
     return (
-      typeof timeout === 'number' && timeout >= 0 && timeout <= VALIDATION_CONSTANTS.MAX_TIMEOUT
+      typeof timeout === 'number' &&
+      timeout >= 0 &&
+      timeout <= VALIDATION_CONSTANTS.MAX_TIMEOUT
     );
   }
 
@@ -400,14 +416,20 @@ export class ConfigManager {
     );
   }
 
-  private hasDangerousKeys(obj: Record<string, unknown>, dangerousKeys: string[]): boolean {
+  private hasDangerousKeys(
+    obj: Record<string, unknown>,
+    dangerousKeys: string[]
+  ): boolean {
     for (const key of Object.keys(obj)) {
       if (dangerousKeys.includes(key)) return true;
       if (
         obj[key] &&
         typeof obj[key] === 'object' &&
         obj[key] !== null &&
-        this.hasDangerousKeys(obj[key] as Record<string, unknown>, dangerousKeys)
+        this.hasDangerousKeys(
+          obj[key] as Record<string, unknown>,
+          dangerousKeys
+        )
       ) {
         return true;
       }

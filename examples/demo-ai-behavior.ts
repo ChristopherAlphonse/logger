@@ -11,14 +11,18 @@ async function demoExpectedBehavior() {
 
   console.log('='.repeat(60));
   console.log('ORIGINAL TECHNICAL LOG:');
-  console.log('[ERROR] [app.ts:123] Connection timeout after 5000ms to database server');
+  console.log(
+    '[ERROR] [app.ts:123] Connection timeout after 5000ms to database server'
+  );
   console.log(
     "AI Translation: The application couldn't connect to the database because it took too long to respond"
   );
 
   console.log(`\n${'='.repeat(60)}`);
   console.log('ORIGINAL TECHNICAL LOG:');
-  console.log('[WARN] [memory.ts:45] Memory usage exceeded 85% threshold: 3.4GB/4GB allocated');
+  console.log(
+    '[WARN] [memory.ts:45] Memory usage exceeded 85% threshold: 3.4GB/4GB allocated'
+  );
   console.log(
     'AI Translation: The system is using too much memory and might slow down or crash soon'
   );
@@ -65,14 +69,18 @@ async function testCurrentStatus() {
   });
 
   const isHealthy = await logger.isAIHealthy();
-  console.log(`AI Service Health: ${isHealthy ? 'Available' : 'Not Available'}`);
+  console.log(
+    `AI Service Health: ${isHealthy ? 'Available' : 'Not Available'}`
+  );
 
   if (isHealthy) {
     console.log('\nOllama is running! Testing actual translation:');
     logger.error('Connection timeout after 5000ms to database server');
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    await new Promise(resolve => setTimeout(resolve, 5000));
   } else {
-    console.log('\nOllama not available. The implementation is ready but needs setup.');
+    console.log(
+      '\nOllama not available. The implementation is ready but needs setup.'
+    );
     console.log('   Running with fallback (original messages only):');
     logger.error('Connection timeout after 5000ms to database server');
     logger.warn('Memory usage exceeded 85% threshold');
