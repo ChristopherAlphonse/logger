@@ -4,17 +4,27 @@ import { ConfigManager } from '../src/config-manager';
 import { EnhancedLogger } from '../src/enhanced-logger';
 
 /**
- * Demo of AI-powered logging features
+ * Demo script exercising AI-powered logging features via EnhancedLogger.
  *
- * Setup:
- * 1. FREE Option (Recommended):
- *    - Install Ollama: https://ollama.ai
- *    - Run: ollama pull llama3.2:3b
- *    - Start Ollama service
+ * Runs a sequence of demonstrations that show automatic and manual AI error analysis,
+ * provider health/stats checks, provider testing, and configuration inspection.
  *
- * 2. PAID Option:
- *    - Create .logger-ai.config.json with your OpenAI API key
- *    - Set provider to "openai"
+ * Behavior:
+ * - Creates an EnhancedLogger configured to emit errors (triggers AI analysis when available).
+ * - Checks AI availability and prints instructions for enabling AI (Ollama or OpenAI).
+ * - Shows AI statistics if present.
+ * - Demo 1: triggers a TypeError and logs it for automatic AI analysis.
+ * - Demo 2: logs a synthetic network error with contextual metadata.
+ * - Demo 3: logs a React component error with props and framework hint.
+ * - Demo 4: when AI is healthy, performs manual analysis via logger.analyzeError and prints the insight.
+ * - Demo 5: runs logger.testAI to validate the AI provider.
+ * - Demo 6: prints current configuration (provider, caching, confidence threshold, cache TTL/size).
+ *
+ * Notes:
+ * - Sleeps briefly between demos to allow asynchronous AI responses to arrive.
+ * - To enable AI features:
+ *   1) FREE: Install Ollama (https://ollama.ai), pull a model (e.g., `ollama pull llama3.2:3b`) and start the service.
+ *   2) PAID: Add an OpenAI API key to `.logger-ai.config.json` and set provider to `"openai"`.
  */
 
 async function main() {
@@ -151,11 +161,24 @@ async function main() {
   console.log('   • Full backward compatibility with existing code');
 }
 
+/**
+ * Pauses execution asynchronously for the given duration.
+ *
+ * Resolves after the specified number of milliseconds.
+ *
+ * @param ms - Duration to sleep in milliseconds
+ * @returns A promise that resolves once the delay has elapsed
+ */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Create sample config if it doesn't exist
+/**
+ * Ensures a sample configuration file exists by creating one if absent.
+ *
+ * Attempts to create a sample config via ConfigManager.createSampleConfig().
+ * Any errors (e.g., config already exists) are swallowed silently.
+ */
 function createConfigIfNeeded() {
   try {
     ConfigManager.createSampleConfig();

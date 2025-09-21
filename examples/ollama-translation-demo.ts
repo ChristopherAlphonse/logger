@@ -4,15 +4,18 @@ import { Logger } from '../src/logger';
 import { LogLevel } from '../src/types';
 
 /**
- * Demo of Ollama-powered log translation features
+ * Runs a demo that showcases Ollama-powered translation of technical log messages into human-readable explanations.
+ *
+ * The function configures a Logger with AI translation settings (using Ollama), checks the AI service health,
+ * enables or disables log translation accordingly, and emits several example logs (errors, warnings, info, debug)
+ * to demonstrate translated vs. standard output.
  *
  * Prerequisites:
  * 1. Install Ollama: https://ollama.ai
- * 2. Run: ollama pull llama3.2:3b
- * 3. Start Ollama service: ollama serve
+ * 2. Pull the model: `ollama pull llama3.2:3b`
+ * 3. Start the service: `ollama serve`
  *
- * This demo shows how technical log messages can be automatically
- * translated into human-readable explanations using Ollama.
+ * @returns A promise that resolves when the demo has finished emitting example logs and reporting AI translation stats.
  */
 
 async function main() {
@@ -119,6 +122,14 @@ async function main() {
   }
 }
 
+/**
+ * Asynchronously pauses execution for the specified duration.
+ *
+ * Useful for delaying async flows (e.g., waiting between demo log examples).
+ *
+ * @param ms - Delay duration in milliseconds.
+ * @returns A promise that resolves once the delay has elapsed.
+ */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
