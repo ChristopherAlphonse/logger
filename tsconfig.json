@@ -1,25 +1,25 @@
 {
-  "compilerOptions": {
-    "allowSyntheticDefaultImports": true,
-    "declaration": true,
-    "declarationMap": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
-    "lib": ["ES2020"],
-    "module": "ESNext",
-    "moduleDetection": "force",
-    "moduleResolution": "node",
-    "noEmit": false,
-    "outDir": "./dist",
-    "resolveJsonModule": true,
-    "rootDir": "./src",
-    "skipLibCheck": true,
-    "sourceMap": true,
-    "strict": true,
-    "target": "ES2020",
-    "types": ["node", "jest"]
-  },
-  "exclude": ["node_modules", "dist"],
-  "include": ["src/**/*", "**/*.test.ts", "**/*.spec.ts"]
+	"compilerOptions": {
+		"allowSyntheticDefaultImports": true,
+		"declaration": true,
+		"declarationMap": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"isolatedModules": true,
+		"lib": ["ES2020"],
+		"module": "ESNext",
+		"moduleDetection": "force",
+		"moduleResolution": "node",
+		"noEmit": false,
+		"outDir": "./dist",
+		"resolveJsonModule": true,
+		"rootDir": "./src",
+		"skipLibCheck": true,
+		"sourceMap": true,
+		"strict": true,
+		"target": "ES2020",
+		"types": ["node", "jest"]
+	},
+	"exclude": ["node_modules", "dist"],
+	"include": ["src/**/*", "**/*.test.ts", "**/*.spec.ts"]
 }

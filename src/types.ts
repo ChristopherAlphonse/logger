@@ -1,244 +1,254 @@
 export enum LogLevel {
-  ERROR = 0,
-  WARN = 1,
-  INFO = 2,
-  DEBUG = 3,
-  TRACE = 4,
+	ERROR = 0,
+	WARN = 1,
+	INFO = 2,
+	DEBUG = 3,
+	TRACE = 4,
 }
 
 export type LogData =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | Record<string, unknown>
-  | unknown[]
-  | Error
-  | Date;
+	| string
+	| number
+	| boolean
+	| null
+	| undefined
+	| Record<string, unknown>
+	| unknown[]
+	| Error
+	| Date;
 
 export enum ConfidenceLevel {
-  LOW = 0,
-  MEDIUM = 1,
-  HIGH = 2,
-  VERY_HIGH = 3,
+	LOW = 0,
+	MEDIUM = 1,
+	HIGH = 2,
+	VERY_HIGH = 3,
 }
 
-export type AIProvider = 'openai' | 'claude' | 'ollama' | 'disabled';
+export type AIProvider = "openai" | "claude" | "ollama" | "disabled";
 
 export type FrameworkContext =
-  | 'react'
-  | 'next'
-  | 'express'
-  | 'fastify'
-  | 'nest'
-  | 'vue'
-  | 'angular'
-  | 'node'
-  | 'browser'
-  | 'unknown';
+	| "react"
+	| "next"
+	| "express"
+	| "fastify"
+	| "nest"
+	| "vue"
+	| "angular"
+	| "node"
+	| "browser"
+	| "unknown";
 
 export interface AIInsight {
-  explanation: string;
+	explanation: string;
 
-  likelyCauses: string[];
+	likelyCauses: string[];
 
-  suggestedFix: string;
+	suggestedFix: string;
 
-  contextualInsights: string[];
+	contextualInsights: string[];
 
-  confidence: ConfidenceLevel;
+	confidence: ConfidenceLevel;
 
-  processingTime: number;
+	processingTime: number;
 
-  cached: boolean;
+	cached: boolean;
 
-  framework?: FrameworkContext;
+	framework?: FrameworkContext;
 }
 
 export interface ErrorAnalysis {
-  error: Error;
+	error: Error;
 
-  stackTrace: StackFrame[];
+	stackTrace: StackFrame[];
 
-  errorType: string;
+	errorType: string;
 
-  insight?: AIInsight;
+	insight?: AIInsight;
 
-  errorHash: string;
+	errorHash: string;
 }
 
 export interface StackFrame {
-  functionName?: string;
+	functionName?: string;
 
-  fileName?: string;
+	fileName?: string;
 
-  lineNumber?: number;
+	lineNumber?: number;
 
-  columnNumber?: number;
+	columnNumber?: number;
 
-  source?: string;
+	source?: string;
 
-  isUserCode: boolean;
+	isUserCode: boolean;
 }
 
 export interface AIConfig {
-  enabled: boolean;
+	enabled: boolean;
 
-  provider: AIProvider;
+	provider: AIProvider;
 
-  apiKey?: string;
+	apiKey?: string;
 
-  caching: boolean;
+	caching: boolean;
 
-  confidenceThreshold: ConfidenceLevel;
+	confidenceThreshold: ConfidenceLevel;
 
-  maxInsightLength: number;
+	maxInsightLength: number;
 
-  timeout: number;
+	timeout: number;
 
-  translateLogs: boolean;
+	translateLogs: boolean;
 
-  translateLogLevels: LogLevel[];
+	translateLogLevels: LogLevel[];
 
-  ollama?: {
-    baseUrl?: string;
-    model?: string;
-    temperature?: number;
-    maxTokens?: number;
-  };
+	ollama?: {
+		baseUrl?: string;
+		model?: string;
+		temperature?: number;
+		maxTokens?: number;
+	};
 
-  openai?: {
-    apiKey?: string;
-    model?: string;
-    temperature?: number;
-    maxTokens?: number;
-    organization?: string;
-  };
+	openai?: {
+		apiKey?: string;
+		model?: string;
+		temperature?: number;
+		maxTokens?: number;
+		organization?: string;
+	};
 
-  claude?: {
-    apiKey?: string;
-    model?: string;
-    temperature?: number;
-    maxTokens?: number;
-  };
+	claude?: {
+		apiKey?: string;
+		model?: string;
+		temperature?: number;
+		maxTokens?: number;
+	};
 
-  prompts?: {
-    errorAnalysis?: string;
-    stackTraceAnalysis?: string;
-    contextAnalysis?: string;
-    logTranslation?: string;
-  };
+	prompts?: {
+		errorAnalysis?: string;
+		stackTraceAnalysis?: string;
+		contextAnalysis?: string;
+		logTranslation?: string;
+	};
 
-  rateLimit?: {
-    maxRequestsPerMinute: number;
-    maxRequestsPerHour: number;
-  };
+	rateLimit?: {
+		maxRequestsPerMinute: number;
+		maxRequestsPerHour: number;
+	};
 }
 
 export interface ErrorPattern {
-  id: string;
+	id: string;
 
-  signature: string;
+	signature: string;
 
-  count: number;
+	count: number;
 
-  firstSeen: Date;
+	firstSeen: Date;
 
-  lastSeen: Date;
+	lastSeen: Date;
 
-  insights: string[];
+	insights: string[];
 
-  solutions: string[];
+	solutions: string[];
 }
 
 export interface LoggerConfig {
-  level?: LogLevel;
+	level?: LogLevel;
 
-  timestamps?: boolean;
+	timestamps?: boolean;
 
-  colors?: boolean;
+	colors?: boolean;
 
-  timestampFormat?: string;
+	timestampFormat?: string;
 
-  showSource?: boolean;
+	showSource?: boolean;
 
-  prefix?: string;
+	prefix?: string;
 
-  json?: boolean;
+	json?: boolean;
 
-  output?: NodeJS.WritableStream | { write: (chunk: string) => void };
+	output?: NodeJS.WritableStream | { write: (chunk: string) => void };
 
-  ai?: Partial<AIConfig>;
+	ai?: Partial<AIConfig>;
 }
 
 export interface LogEntry {
-  level: LogLevel;
-  message: string;
-  timestamp: Date;
-  source?: string;
-  data?: LogData;
-  prefix?: string;
+	level: LogLevel;
+	message: string;
+	timestamp: Date;
+	source?: string;
+	data?: LogData;
+	prefix?: string;
 
-  aiAnalysis?: ErrorAnalysis;
+	aiAnalysis?: ErrorAnalysis;
 
-  patterns?: ErrorPattern[];
+	patterns?: ErrorPattern[];
 }
 
 export interface ILogger {
-  error(message: string, data?: LogData): void;
-  warn(message: string, data?: LogData): void;
-  info(message: string, data?: LogData): void;
-  debug(message: string, data?: LogData): void;
-  trace(message: string, data?: LogData): void;
-  log(level: LogLevel, message: string, data?: LogData): void;
-  setLevel(level: LogLevel): void;
-  setConfig(config: Partial<LoggerConfig>): void;
-  getConfig(): LoggerConfig;
-  isEnabled(level: LogLevel): boolean;
-  child(prefix: string): ILogger;
+	error(message: string, data?: LogData): void;
+	warn(message: string, data?: LogData): void;
+	info(message: string, data?: LogData): void;
+	debug(message: string, data?: LogData): void;
+	trace(message: string, data?: LogData): void;
+	log(level: LogLevel, message: string, data?: LogData): void;
+	setLevel(level: LogLevel): void;
+	setConfig(config: Partial<LoggerConfig>): void;
+	getConfig(): LoggerConfig;
+	isEnabled(level: LogLevel): boolean;
+	child(prefix: string): ILogger;
 
-  analyzeError?(error: Error): Promise<ErrorAnalysis>;
-  getInsight?(error: Error): Promise<AIInsight | null>;
-  enableAI?(config?: Partial<AIConfig>): void;
-  disableAI?(): void;
-  enableLogTranslation?(): void;
-  disableLogTranslation?(): void;
+	analyzeError?(error: Error): Promise<ErrorAnalysis>;
+	getInsight?(error: Error): Promise<AIInsight | null>;
+	enableAI?(config?: Partial<AIConfig>): void;
+	disableAI?(): void;
+	enableLogTranslation?(): void;
+	disableLogTranslation?(): void;
 }
 
 export interface IAIService {
-  analyzeError(error: Error, context?: Record<string, unknown>): Promise<AIInsight>;
-  analyzeStackTrace(
-    stackTrace: StackFrame[],
-    context?: Record<string, unknown>
-  ): Promise<AIInsight>;
-  detectFramework(stackTrace: StackFrame[], errorMessage: string): FrameworkContext;
-  translateLog(message: string, level: LogLevel, data?: LogData): Promise<string>;
-  isHealthy(): Promise<boolean>;
+	analyzeError(
+		error: Error,
+		context?: Record<string, unknown>,
+	): Promise<AIInsight>;
+	analyzeStackTrace(
+		stackTrace: StackFrame[],
+		context?: Record<string, unknown>,
+	): Promise<AIInsight>;
+	detectFramework(
+		stackTrace: StackFrame[],
+		errorMessage: string,
+	): FrameworkContext;
+	translateLog(
+		message: string,
+		level: LogLevel,
+		data?: LogData,
+	): Promise<string>;
+	isHealthy(): Promise<boolean>;
 }
 
 export interface IAICache {
-  get(key: string): Promise<AIInsight | null>;
-  set(key: string, insight: AIInsight, ttl?: number): Promise<void>;
-  clear(): Promise<void>;
-  stats(): Promise<{ hits: number; misses: number; size: number }>;
+	get(key: string): Promise<AIInsight | null>;
+	set(key: string, insight: AIInsight, ttl?: number): Promise<void>;
+	clear(): Promise<void>;
+	stats(): Promise<{ hits: number; misses: number; size: number }>;
 }
 
 export type ChalkColor = (text: string) => string;
 
 export interface ChalkInstance {
-  red: ChalkColor;
-  green: ChalkColor;
-  blue: ChalkColor;
-  yellow: ChalkColor;
-  magenta: ChalkColor;
-  cyan: ChalkColor;
-  gray: ChalkColor;
-  white: ChalkColor;
-  black: ChalkColor;
-  bold: ChalkColor;
-  italic: ChalkColor;
-  underline: ChalkColor;
-  inverse: ChalkColor;
-  strikethrough: ChalkColor;
+	red: ChalkColor;
+	green: ChalkColor;
+	blue: ChalkColor;
+	yellow: ChalkColor;
+	magenta: ChalkColor;
+	cyan: ChalkColor;
+	gray: ChalkColor;
+	white: ChalkColor;
+	black: ChalkColor;
+	bold: ChalkColor;
+	italic: ChalkColor;
+	underline: ChalkColor;
+	inverse: ChalkColor;
+	strikethrough: ChalkColor;
 }

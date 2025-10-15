@@ -1,389 +1,434 @@
+import { AICache } from "./ai-cache";
+import { ConfigManager } from "./config-manager";
 import {
-  AI_CONSTANTS,
-  NETWORK_CONSTANTS,
-  RATE_LIMIT_CONSTANTS,
-  TIME_CONSTANTS,
-  VALIDATION_CONSTANTS,
-} from './constants';
-import type { AIInsight, FrameworkContext, IAIService, StackFrame } from './types';
-import { ConfidenceLevel, LogLevel } from './types';
-
-import { AICache } from './ai-cache';
-import { ConfigManager } from './config-manager';
-import { createInternalLogger } from './internalLogger';
+	AI_CONSTANTS,
+	NETWORK_CONSTANTS,
+	TIME_CONSTANTS,
+	VALIDATION_CONSTANTS,
+} from "./constants";
+import { createInternalLogger } from "./internalLogger";
+import type {
+	AIInsight,
+	FrameworkContext,
+	IAIService,
+	StackFrame,
+} from "./types";
+import { ConfidenceLevel, LogLevel } from "./types";
 
 declare const window: { [key: string]: unknown } | undefined;
 
-const internalLogger = createInternalLogger('[AI-SERVICE]');
+const internalLogger = createInternalLogger("[AI-SERVICE]");
 
 interface OllamaModule {
-  Ollama: new (config: { host: string }) => {
-    list(): Promise<unknown>;
-    generate(options: {
-      model: string;
-      prompt: string;
-      options: { temperature: number; num_predict: number };
-      stream?: boolean;
-    }): Promise<{ response: string }>;
-  };
+	Ollama: new (config: {
+		host: string;
+	}) => {
+		list(): Promise<unknown>;
+		generate(options: {
+			model: string;
+			prompt: string;
+			options: { temperature: number; num_predict: number };
+			stream?: boolean;
+		}): Promise<{ response: string }>;
+	};
 }
 
 interface OpenAIModule {
-  default?: new (config: {
-    apiKey: string;
-    organization?: string;
-  }) => OpenAIInstance;
-  new (config: { apiKey: string; organization?: string }): OpenAIInstance;
-  chat: {
-    completions: {
-      create(
-        options: {
-          model: string;
-          messages: Array<{ role: string; content: string }>;
-          temperature: number;
-          max_tokens: number;
-        },
-        config?: { timeout: number }
-      ): Promise<{
-        choices: Array<{ message?: { content?: string } }>;
-      }>;
-    };
-  };
-  models: {
-    list(): Promise<unknown>;
-  };
+	default?: new (config: {
+		apiKey: string;
+		organization?: string;
+	}) => OpenAIInstance;
+	new (config: { apiKey: string; organization?: string }): OpenAIInstance;
+	chat: {
+		completions: {
+			create(
+				options: {
+					model: string;
+					messages: Array<{ role: string; content: string }>;
+					temperature: number;
+					max_tokens: number;
+				},
+				config?: { timeout: number },
+			): Promise<{
+				choices: Array<{ message?: { content?: string } }>;
+			}>;
+		};
+	};
+	models: {
+		list(): Promise<unknown>;
+	};
 }
 
 interface OpenAIInstance {
-  chat: {
-    completions: {
-      create(
-        options: {
-          model: string;
-          messages: Array<{ role: string; content: string }>;
-          temperature: number;
-          max_tokens: number;
-        },
-        config?: { timeout: number }
-      ): Promise<{
-        choices: Array<{ message?: { content?: string } }>;
-      }>;
-    };
-  };
-  models: {
-    list(): Promise<unknown>;
-  };
+	chat: {
+		completions: {
+			create(
+				options: {
+					model: string;
+					messages: Array<{ role: string; content: string }>;
+					temperature: number;
+					max_tokens: number;
+				},
+				config?: { timeout: number },
+			): Promise<{
+				choices: Array<{ message?: { content?: string } }>;
+			}>;
+		};
+	};
+	models: {
+		list(): Promise<unknown>;
+	};
 }
 
-let Ollama: OllamaModule['Ollama'] | null = null;
+let Ollama: OllamaModule["Ollama"] | null = null;
 let OpenAI: OpenAIModule | null = null;
 
-if (typeof window === 'undefined' && typeof process !== 'undefined') {
-  try {
-    const ollamaModule = require('ollama');
-    Ollama = ollamaModule.Ollama;
-  } catch (_error) {}
+if (typeof window === "undefined" && typeof process !== "undefined") {
+	try {
+		const ollamaModule = require("ollama");
+		Ollama = ollamaModule.Ollama;
+	} catch {
+		// Ollama module not available, will be handled gracefully
+	}
 
-  try {
-    const openaiModule = require('openai');
-    OpenAI = openaiModule.default || openaiModule;
-  } catch (_error) {}
+	try {
+		const openaiModule = require("openai");
+		OpenAI = openaiModule.default || openaiModule;
+	} catch {
+		// OpenAI module not available, will be handled gracefully
+	}
 }
 
 export class AIService implements IAIService {
-  private configManager: ConfigManager;
-  private cache: AICache;
-  private ollama: InstanceType<OllamaModule['Ollama']> | null = null;
-  private openai: OpenAIInstance | null = null;
-  private requestCount = 0;
-  private requestTimes: number[] = [];
+	private configManager: ConfigManager;
+	private cache: AICache;
+	private ollama: InstanceType<OllamaModule["Ollama"]> | null = null;
+	private openai: OpenAIInstance | null = null;
+	private requestCount = 0;
+	private readonly requestTimes: number[] = [];
 
-  constructor() {
-    this.configManager = ConfigManager.getInstance();
-    this.cache = new AICache();
-    this.initialize();
-  }
+	constructor() {
+		this.configManager = ConfigManager.getInstance();
+		this.cache = new AICache();
+		this.initialize();
+	}
 
-  private initialize(): void {
-    const config = this.configManager.getAIConfig();
+	private initialize(): void {
+		const config = this.configManager.getAIConfig();
 
-    if (typeof window !== 'undefined') {
-      internalLogger.info('AI features disabled in browser environment');
-      return;
-    }
+		if (typeof window !== "undefined") {
+			internalLogger.info("AI features disabled in browser environment");
+			return;
+		}
 
-    switch (config.provider) {
-      case 'ollama':
-        if (Ollama) {
-          this.ollama = new Ollama({
-            host: config.ollama?.baseUrl || NETWORK_CONSTANTS.OLLAMA_DEFAULT_BASE_URL,
-          });
-        } else {
-          internalLogger.warn('Ollama not available - AI features disabled');
-        }
-        break;
-      case 'openai':
-        if (config.openai?.apiKey && OpenAI) {
-          const OpenAIConstructor = OpenAI.default || OpenAI;
-          this.openai = new (OpenAIConstructor as typeof OpenAI)({
-            apiKey: config.openai.apiKey,
-            organization: config.openai.organization,
-          });
-        } else {
-          internalLogger.warn('OpenAI not available or no API key - AI features disabled');
-        }
-        break;
-      case 'claude':
-        internalLogger.warn(
-          'Claude integration not yet available. Use "ollama" or "openai" instead.'
-        );
-        break;
-      case 'disabled':
-        break;
-      default:
-        internalLogger.warn(`Unknown AI provider: ${config.provider}`);
-    }
-  }
+		switch (config.provider) {
+			case "ollama":
+				if (Ollama) {
+					this.ollama = new Ollama({
+						host:
+							config.ollama?.baseUrl ||
+							NETWORK_CONSTANTS.OLLAMA_DEFAULT_BASE_URL,
+					});
+				} else {
+					internalLogger.warn("Ollama not available - AI features disabled");
+				}
+				break;
+			case "openai":
+				if (config.openai?.apiKey && OpenAI) {
+					const OpenAIConstructor = OpenAI.default || OpenAI;
+					this.openai = new (OpenAIConstructor as typeof OpenAI)({
+						apiKey: config.openai.apiKey,
+						organization: config.openai.organization,
+					});
+				} else {
+					internalLogger.warn(
+						"OpenAI not available or no API key - AI features disabled",
+					);
+				}
+				break;
+			case "claude":
+				internalLogger.warn(
+					'Claude integration not yet available. Use "ollama" or "openai" instead.',
+				);
+				break;
+			case "disabled":
+				break;
+			default:
+				internalLogger.warn(`Unknown AI provider: ${config.provider}`);
+		}
+	}
 
-  async isHealthy(): Promise<boolean> {
-    const config = this.configManager.getAIConfig();
+	async isHealthy(): Promise<boolean> {
+		const config = this.configManager.getAIConfig();
 
-    try {
-      switch (config.provider) {
-        case 'ollama':
-          if (!this.ollama) return false;
-          await this.ollama.list();
-          return true;
+		try {
+			switch (config.provider) {
+				case "ollama":
+					if (!this.ollama) return false;
+					await this.ollama.list();
+					return true;
 
-        case 'openai':
-          if (!this.openai || !this.openai.models) return false;
-          await this.openai.models.list();
-          return true;
+				case "openai":
+					if (!this.openai?.models) return false;
+					await this.openai.models.list();
+					return true;
 
-        case 'claude':
-          return false;
+				case "claude":
+					return false;
 
-        default:
-          return false;
-      }
-    } catch (error) {
-      internalLogger.warn(`AI provider ${config.provider} health check failed`, {
-        provider: config.provider,
-        error,
-      });
-      return false;
-    }
-  }
+				default:
+					return false;
+			}
+		} catch (error) {
+			internalLogger.warn(
+				`AI provider ${config.provider} health check failed`,
+				{
+					provider: config.provider,
+					error,
+				},
+			);
+			return false;
+		}
+	}
 
-  async analyzeError(error: Error, context?: Record<string, unknown>): Promise<AIInsight> {
-    const startTime = Date.now();
-    const config = this.configManager.getAIConfig();
+	async analyzeError(
+		error: Error,
+		context?: Record<string, unknown>,
+	): Promise<AIInsight> {
+		const startTime = Date.now();
+		const config = this.configManager.getAIConfig();
 
-    if (config.caching) {
-      const cacheKey = AICache.generateErrorKey(error, context);
-      const cached = await this.cache.get(cacheKey);
-      if (cached) {
-        return cached;
-      }
-    }
+		if (config.caching) {
+			const cacheKey = AICache.generateErrorKey(error, context);
+			const cached = await this.cache.get(cacheKey);
+			if (cached) {
+				return cached;
+			}
+		}
 
-    const insight = await this.generateInsight(error, context);
-    insight.processingTime = Date.now() - startTime;
+		const insight = await this.generateInsight(error, context);
+		insight.processingTime = Date.now() - startTime;
 
-    if (config.caching) {
-      const cacheKey = AICache.generateErrorKey(error, context);
-      await this.cache.set(cacheKey, insight);
-    }
+		if (config.caching) {
+			const cacheKey = AICache.generateErrorKey(error, context);
+			await this.cache.set(cacheKey, insight);
+		}
 
-    this.recordRequest();
-    return insight;
-  }
+		this.recordRequest();
+		return insight;
+	}
 
-  async analyzeStackTrace(
-    stackTrace: StackFrame[],
-    context?: Record<string, unknown>
-  ): Promise<AIInsight> {
-    const startTime = Date.now();
-    const config = this.configManager.getAIConfig();
+	async analyzeStackTrace(
+		stackTrace: StackFrame[],
+		context?: Record<string, unknown>,
+	): Promise<AIInsight> {
+		const startTime = Date.now();
+		const config = this.configManager.getAIConfig();
 
-    if (config.caching) {
-      const cacheKey = AICache.generateStackTraceKey(stackTrace, context);
-      const cached = await this.cache.get(cacheKey);
-      if (cached) {
-        return cached;
-      }
-    }
+		if (config.caching) {
+			const cacheKey = AICache.generateStackTraceKey(stackTrace, context);
+			const cached = await this.cache.get(cacheKey);
+			if (cached) {
+				return cached;
+			}
+		}
 
-    const framework = this.detectFramework(stackTrace, '');
-    const insight = await this.generateStackTraceInsight(stackTrace, framework, context);
-    insight.processingTime = Date.now() - startTime;
+		const framework = this.detectFramework(stackTrace, "");
+		const insight = await this.generateStackTraceInsight(
+			stackTrace,
+			framework,
+			context,
+		);
+		insight.processingTime = Date.now() - startTime;
 
-    if (config.caching) {
-      const cacheKey = AICache.generateStackTraceKey(stackTrace, context);
-      await this.cache.set(cacheKey, insight);
-    }
+		if (config.caching) {
+			const cacheKey = AICache.generateStackTraceKey(stackTrace, context);
+			await this.cache.set(cacheKey, insight);
+		}
 
-    this.recordRequest();
-    return insight;
-  }
+		this.recordRequest();
+		return insight;
+	}
 
-  detectFramework(stackTrace: StackFrame[], errorMessage: string): FrameworkContext {
-    const message = errorMessage.toLowerCase();
-    const files = stackTrace.map((frame) => frame.fileName?.toLowerCase() || '');
+	detectFramework(
+		stackTrace: StackFrame[],
+		errorMessage: string,
+	): FrameworkContext {
+		const message = errorMessage.toLowerCase();
+		const files = stackTrace.map(
+			(frame) => frame.fileName?.toLowerCase() || "",
+		);
 
-    if (files.some((f) => f.includes('react') || f.includes('jsx'))) return 'react';
-    if (files.some((f) => f.includes('next'))) return 'next';
-    if (files.some((f) => f.includes('express'))) return 'express';
-    if (files.some((f) => f.includes('fastify'))) return 'fastify';
-    if (files.some((f) => f.includes('nest'))) return 'nest';
-    if (files.some((f) => f.includes('vue'))) return 'vue';
-    if (files.some((f) => f.includes('angular'))) return 'angular';
-    if (message.includes('document') || message.includes('window')) return 'browser';
-    if (files.some((f) => f.includes('node_modules'))) return 'node';
+		if (files.some((f) => f.includes("react") || f.includes("jsx")))
+			return "react";
+		if (files.some((f) => f.includes("next"))) return "next";
+		if (files.some((f) => f.includes("express"))) return "express";
+		if (files.some((f) => f.includes("fastify"))) return "fastify";
+		if (files.some((f) => f.includes("nest"))) return "nest";
+		if (files.some((f) => f.includes("vue"))) return "vue";
+		if (files.some((f) => f.includes("angular"))) return "angular";
+		if (message.includes("document") || message.includes("window"))
+			return "browser";
+		if (files.some((f) => f.includes("node_modules"))) return "node";
 
-    return 'unknown' as FrameworkContext;
-  }
+		return "unknown" as FrameworkContext;
+	}
 
-  private async generateInsight(
-    error: Error,
-    context?: Record<string, unknown>
-  ): Promise<AIInsight> {
-    const config = this.configManager.getAIConfig();
-    const framework = this.detectFramework([], error.message) || 'unknown';
+	private async generateInsight(
+		error: Error,
+		context?: Record<string, unknown>,
+	): Promise<AIInsight> {
+		const config = this.configManager.getAIConfig();
+		const framework = this.detectFramework([], error.message) || "unknown";
 
-    try {
-      switch (config.provider) {
-        case 'ollama':
-          return await this.generateOllamaInsight(error, framework, context);
-        case 'openai':
-          return await this.generateOpenAIInsight(error, framework, context);
-        case 'claude':
-          return await this.generateClaudeInsight(error, framework, context);
-        default:
-          return this.generateBasicInsight(error, framework);
-      }
-    } catch (aiError) {
-      internalLogger.warn('AI analysis failed, falling back to basic insights', {
-        aiError,
-        errorMessage: error.message,
-      });
-      return this.generateBasicInsight(error, framework);
-    }
-  }
+		try {
+			switch (config.provider) {
+				case "ollama":
+					return await this.generateOllamaInsight(error, framework, context);
+				case "openai":
+					return await this.generateOpenAIInsight(error, framework, context);
+				case "claude":
+					return await this.generateClaudeInsight(error, framework, context);
+				default:
+					return this.generateBasicInsight(error, framework);
+			}
+		} catch (aiError) {
+			internalLogger.warn(
+				"AI analysis failed, falling back to basic insights",
+				{
+					aiError,
+					errorMessage: error.message,
+				},
+			);
+			return this.generateBasicInsight(error, framework);
+		}
+	}
 
-  private async generateOllamaInsight(
-    error: Error,
-    framework: FrameworkContext,
-    context?: Record<string, unknown>
-  ): Promise<AIInsight> {
-    if (!this.ollama) {
-      throw new Error('Ollama not initialized');
-    }
+	private async generateOllamaInsight(
+		error: Error,
+		framework: FrameworkContext,
+		context?: Record<string, unknown>,
+	): Promise<AIInsight> {
+		if (!this.ollama) {
+			throw new Error("Ollama not initialized");
+		}
 
-    const config = this.configManager.getAIConfig();
-    const prompt = this.buildErrorAnalysisPrompt(error, framework, context);
+		const config = this.configManager.getAIConfig();
+		const prompt = this.buildErrorAnalysisPrompt(error, framework, context);
 
-    const response = await this.ollama.generate({
-      model: config.ollama?.model || AI_CONSTANTS.OLLAMA_DEFAULT_MODEL,
-      prompt,
-      options: {
-        temperature: config.ollama?.temperature || AI_CONSTANTS.DEFAULT_TEMPERATURE,
-        num_predict: config.ollama?.maxTokens || AI_CONSTANTS.DEFAULT_MAX_TOKENS,
-      },
-    });
+		const response = await this.ollama.generate({
+			model: config.ollama?.model || AI_CONSTANTS.OLLAMA_DEFAULT_MODEL,
+			prompt,
+			options: {
+				temperature:
+					config.ollama?.temperature || AI_CONSTANTS.DEFAULT_TEMPERATURE,
+				num_predict:
+					config.ollama?.maxTokens || AI_CONSTANTS.DEFAULT_MAX_TOKENS,
+			},
+		});
 
-    return this.parseAIResponse(response.response, framework);
-  }
+		return this.parseAIResponse(response.response, framework);
+	}
 
-  private async generateOpenAIInsight(
-    error: Error,
-    framework: FrameworkContext,
-    context?: Record<string, unknown>
-  ): Promise<AIInsight> {
-    if (!this.openai) {
-      throw new Error('OpenAI not initialized');
-    }
+	private async generateOpenAIInsight(
+		error: Error,
+		framework: FrameworkContext,
+		context?: Record<string, unknown>,
+	): Promise<AIInsight> {
+		if (!this.openai) {
+			throw new Error("OpenAI not initialized");
+		}
 
-    const config = this.configManager.getAIConfig();
-    const prompt = this.buildErrorAnalysisPrompt(error, framework, context);
+		const config = this.configManager.getAIConfig();
+		const prompt = this.buildErrorAnalysisPrompt(error, framework, context);
 
-    const response = await this.openai.chat.completions.create(
-      {
-        model: config.openai?.model || AI_CONSTANTS.OPENAI_DEFAULT_MODEL,
-        messages: [
-          { role: 'system', content: this.getSystemPrompt() },
-          { role: 'user', content: prompt },
-        ],
-        temperature: config.openai?.temperature || AI_CONSTANTS.DEFAULT_TEMPERATURE,
-        max_tokens: config.openai?.maxTokens || AI_CONSTANTS.DEFAULT_MAX_TOKENS,
-      },
-      { timeout: config.timeout }
-    );
+		const response = await this.openai.chat.completions.create(
+			{
+				model: config.openai?.model || AI_CONSTANTS.OPENAI_DEFAULT_MODEL,
+				messages: [
+					{ role: "system", content: this.getSystemPrompt() },
+					{ role: "user", content: prompt },
+				],
+				temperature:
+					config.openai?.temperature || AI_CONSTANTS.DEFAULT_TEMPERATURE,
+				max_tokens: config.openai?.maxTokens || AI_CONSTANTS.DEFAULT_MAX_TOKENS,
+			},
+			{ timeout: config.timeout },
+		);
 
-    const content = response.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('No response from OpenAI');
-    }
+		const content = response.choices[0]?.message?.content;
+		if (!content) {
+			throw new Error("No response from OpenAI");
+		}
 
-    return this.parseAIResponse(content, framework);
-  }
+		return this.parseAIResponse(content, framework);
+	}
 
-  private async generateClaudeInsight(
-    _error: Error,
-    _framework: FrameworkContext,
-    _context?: Record<string, unknown>
-  ): Promise<AIInsight> {
-    throw new Error('Claude integration not yet available. Use "ollama" or "openai" instead.');
-  }
+	private async generateClaudeInsight(
+		_error: Error,
+		_framework: FrameworkContext,
+		_context?: Record<string, unknown>,
+	): Promise<AIInsight> {
+		throw new Error(
+			'Claude integration not yet available. Use "ollama" or "openai" instead.',
+		);
+	}
 
-  private async generateStackTraceInsight(
-    stackTrace: StackFrame[],
-    framework: FrameworkContext,
-    context?: Record<string, unknown>
-  ): Promise<AIInsight> {
-    const config = this.configManager.getAIConfig();
-    const prompt = this.buildStackTraceAnalysisPrompt(stackTrace, framework, context);
+	private async generateStackTraceInsight(
+		stackTrace: StackFrame[],
+		framework: FrameworkContext,
+		context?: Record<string, unknown>,
+	): Promise<AIInsight> {
+		const config = this.configManager.getAIConfig();
+		const prompt = this.buildStackTraceAnalysisPrompt(
+			stackTrace,
+			framework,
+			context,
+		);
 
-    switch (config.provider) {
-      case 'ollama': {
-        if (!this.ollama) throw new Error('Ollama not initialized');
-        const response = await this.ollama.generate({
-          model: config.ollama?.model || 'llama3.2:3b',
-          prompt,
-          options: {
-            temperature: config.ollama?.temperature || 0.7,
-            num_predict: config.ollama?.maxTokens || 1000,
-          },
-        });
-        return this.parseAIResponse(response.response, framework);
-      }
+		switch (config.provider) {
+			case "ollama": {
+				if (!this.ollama) throw new Error("Ollama not initialized");
+				const response = await this.ollama.generate({
+					model: config.ollama?.model || "llama3.2:3b",
+					prompt,
+					options: {
+						temperature: config.ollama?.temperature || 0.7,
+						num_predict: config.ollama?.maxTokens || 1000,
+					},
+				});
+				return this.parseAIResponse(response.response, framework);
+			}
 
-      case 'openai': {
-        if (!this.openai) throw new Error('OpenAI not initialized');
-        const openaiResponse = await this.openai.chat.completions.create(
-          {
-            model: config.openai?.model || 'gpt-3.5-turbo',
-            messages: [
-              { role: 'system', content: this.getSystemPrompt() },
-              { role: 'user', content: prompt },
-            ],
-            temperature: config.openai?.temperature || 0.7,
-            max_tokens: config.openai?.maxTokens || 1000,
-          },
-          { timeout: config.timeout }
-        );
-        const content = openaiResponse.choices[0]?.message?.content;
-        if (!content) throw new Error('No response from OpenAI');
-        return this.parseAIResponse(content, framework);
-      }
+			case "openai": {
+				if (!this.openai) throw new Error("OpenAI not initialized");
+				const openaiResponse = await this.openai.chat.completions.create(
+					{
+						model: config.openai?.model || "gpt-3.5-turbo",
+						messages: [
+							{ role: "system", content: this.getSystemPrompt() },
+							{ role: "user", content: prompt },
+						],
+						temperature: config.openai?.temperature || 0.7,
+						max_tokens: config.openai?.maxTokens || 1000,
+					},
+					{ timeout: config.timeout },
+				);
+				const content = openaiResponse.choices[0]?.message?.content;
+				if (!content) throw new Error("No response from OpenAI");
+				return this.parseAIResponse(content, framework);
+			}
 
-      default:
-        return this.generateBasicInsight(new Error('Stack trace analysis'), framework);
-    }
-  }
+			default:
+				return this.generateBasicInsight(
+					new Error("Stack trace analysis"),
+					framework,
+				);
+		}
+	}
 
-  private getSystemPrompt(): string {
-    return `You are an expert JavaScript/TypeScript debugger. Analyze the provided error or stack trace and provide helpful insights in the following JSON format:
+	private getSystemPrompt(): string {
+		return `You are an expert JavaScript/TypeScript debugger. Analyze the provided error or stack trace and provide helpful insights in the following JSON format:
 
 {
   "explanation": "Brief explanation of what went wrong",
@@ -394,22 +439,22 @@ export class AIService implements IAIService {
 }
 
 Be concise, precise, and helpful. Focus on practical solutions.`;
-  }
+	}
 
-  private buildErrorAnalysisPrompt(
-    error: Error,
-    framework: FrameworkContext,
-    context?: Record<string, unknown>
-  ): string {
-    const sanitizedError = {
-      name: this.sanitizeString(error.name),
-      message: this.sanitizeString(error.message),
-      stack: this.sanitizeString(error.stack || ''),
-    };
+	private buildErrorAnalysisPrompt(
+		error: Error,
+		framework: FrameworkContext,
+		context?: Record<string, unknown>,
+	): string {
+		const sanitizedError = {
+			name: this.sanitizeString(error.name),
+			message: this.sanitizeString(error.message),
+			stack: this.sanitizeString(error.stack || ""),
+		};
 
-    const sanitizedContext = this.sanitizeContext(context);
+		const sanitizedContext = this.sanitizeContext(context);
 
-    return `Analyze this JavaScript/TypeScript error:
+		return `Analyze this JavaScript/TypeScript error:
 
 Error: ${sanitizedError.name}: ${sanitizedError.message}
 Stack: ${sanitizedError.stack}
@@ -417,26 +462,29 @@ Framework: ${framework}
 Context: ${JSON.stringify(sanitizedContext, null, 2)}
 
 Provide analysis in JSON format.`;
-  }
+	}
 
-  private buildStackTraceAnalysisPrompt(
-    stackTrace: StackFrame[],
-    framework: FrameworkContext,
-    context?: Record<string, unknown>
-  ): string {
-    const sanitizedStackTrace = stackTrace.map((frame) => ({
-      functionName: this.sanitizeString(frame.functionName || 'anonymous'),
-      fileName: this.sanitizeString(frame.fileName || ''),
-      lineNumber: typeof frame.lineNumber === 'number' ? frame.lineNumber : 0,
-    }));
+	private buildStackTraceAnalysisPrompt(
+		stackTrace: StackFrame[],
+		framework: FrameworkContext,
+		context?: Record<string, unknown>,
+	): string {
+		const sanitizedStackTrace = stackTrace.map((frame) => ({
+			functionName: this.sanitizeString(frame.functionName || "anonymous"),
+			fileName: this.sanitizeString(frame.fileName || ""),
+			lineNumber: typeof frame.lineNumber === "number" ? frame.lineNumber : 0,
+		}));
 
-    const stackStr = sanitizedStackTrace
-      .map((frame) => `${frame.functionName} at ${frame.fileName}:${frame.lineNumber}`)
-      .join('\n');
+		const stackStr = sanitizedStackTrace
+			.map(
+				(frame) =>
+					`${frame.functionName} at ${frame.fileName}:${frame.lineNumber}`,
+			)
+			.join("\n");
 
-    const sanitizedContext = this.sanitizeContext(context);
+		const sanitizedContext = this.sanitizeContext(context);
 
-    return `Analyze this JavaScript/TypeScript stack trace:
+		return `Analyze this JavaScript/TypeScript stack trace:
 
 Stack Trace:
 ${stackStr}
@@ -444,341 +492,352 @@ Framework: ${framework}
 Context: ${JSON.stringify(sanitizedContext, null, 2)}
 
 Provide analysis in JSON format.`;
-  }
+	}
 
-  private parseAIResponse(response: string, framework: FrameworkContext): AIInsight {
-    try {
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return {
-          explanation: parsed.explanation || 'Error analysis',
-          likelyCauses: parsed.likelyCauses || ['Unknown cause'],
-          suggestedFix: parsed.suggestedFix || 'Check the error details',
-          contextualInsights: parsed.contextualInsights || [],
-          confidence: this.parseConfidence(parsed.confidence),
-          processingTime: 0,
-          cached: false,
-          framework,
-        };
-      }
-    } catch (error) {
-      internalLogger.warn('Failed to parse AI response', { error, response });
-    }
+	private parseAIResponse(
+		response: string,
+		framework: FrameworkContext,
+	): AIInsight {
+		try {
+			const jsonMatch = response.match(/\{[\s\S]*\}/);
+			if (jsonMatch) {
+				const parsed = JSON.parse(jsonMatch[0]);
+				return {
+					explanation: parsed.explanation || "Error analysis",
+					likelyCauses: parsed.likelyCauses || ["Unknown cause"],
+					suggestedFix: parsed.suggestedFix || "Check the error details",
+					contextualInsights: parsed.contextualInsights || [],
+					confidence: this.parseConfidence(parsed.confidence),
+					processingTime: 0,
+					cached: false,
+					framework,
+				};
+			}
+		} catch (error) {
+			internalLogger.warn("Failed to parse AI response", { error, response });
+		}
 
-    return {
-      explanation: 'AI analysis failed, using basic insight',
-      likelyCauses: ['Analysis error'],
-      suggestedFix: 'Check the error details manually',
-      contextualInsights: ['AI service unavailable'],
-      confidence: ConfidenceLevel.LOW,
-      processingTime: 0,
-      cached: false,
-      framework,
-    };
-  }
+		return {
+			explanation: "AI analysis failed, using basic insight",
+			likelyCauses: ["Analysis error"],
+			suggestedFix: "Check the error details manually",
+			contextualInsights: ["AI service unavailable"],
+			confidence: ConfidenceLevel.LOW,
+			processingTime: 0,
+			cached: false,
+			framework,
+		};
+	}
 
-  private parseConfidence(confidence: string): ConfidenceLevel {
-    switch (confidence?.toUpperCase()) {
-      case 'VERY_HIGH':
-        return ConfidenceLevel.VERY_HIGH;
-      case 'HIGH':
-        return ConfidenceLevel.HIGH;
-      case 'MEDIUM':
-        return ConfidenceLevel.MEDIUM;
-      case 'LOW':
-        return ConfidenceLevel.LOW;
-      default:
-        return ConfidenceLevel.MEDIUM;
-    }
-  }
+	private parseConfidence(confidence: string): ConfidenceLevel {
+		switch (confidence?.toUpperCase()) {
+			case "VERY_HIGH":
+				return ConfidenceLevel.VERY_HIGH;
+			case "HIGH":
+				return ConfidenceLevel.HIGH;
+			case "MEDIUM":
+				return ConfidenceLevel.MEDIUM;
+			case "LOW":
+				return ConfidenceLevel.LOW;
+			default:
+				return ConfidenceLevel.MEDIUM;
+		}
+	}
 
-  private generateBasicInsight(error: Error, framework: FrameworkContext): AIInsight {
-    return {
-      explanation: `Basic analysis of ${error.name}: ${error.message}`,
-      likelyCauses: ['Unknown cause - AI analysis unavailable'],
-      suggestedFix: 'Check the error details and stack trace',
-      contextualInsights: ['AI service not available'],
-      confidence: ConfidenceLevel.LOW,
-      processingTime: 0,
-      cached: false,
-      framework,
-    };
-  }
+	private generateBasicInsight(
+		error: Error,
+		framework: FrameworkContext,
+	): AIInsight {
+		return {
+			explanation: `Basic analysis of ${error.name}: ${error.message}`,
+			likelyCauses: ["Unknown cause - AI analysis unavailable"],
+			suggestedFix: "Check the error details and stack trace",
+			contextualInsights: ["AI service not available"],
+			confidence: ConfidenceLevel.LOW,
+			processingTime: 0,
+			cached: false,
+			framework,
+		};
+	}
 
-  private checkRateLimit(): boolean {
-    const config = this.configManager.getAIConfig();
-    const now = Date.now();
-    const oneMinuteAgo = now - TIME_CONSTANTS.ONE_MINUTE;
-    const oneHourAgo = now - TIME_CONSTANTS.ONE_HOUR;
+	private recordRequest(): void {
+		this.requestCount++;
+		this.requestTimes.push(Date.now());
+	}
 
-    this.requestTimes = this.requestTimes.filter((time) => time > oneHourAgo);
+	getStats(): {
+		requestCount: number;
+		recentRequests: number;
+		provider: string;
+		cacheStats: Record<string, unknown>;
+	} {
+		const config = this.configManager.getAIConfig();
+		const recentRequests = this.requestTimes.filter(
+			(time) => time > Date.now() - TIME_CONSTANTS.ONE_MINUTE,
+		).length;
 
-    const recentRequests = this.requestTimes.filter((time) => time > oneMinuteAgo).length;
-    const hourlyRequests = this.requestTimes.length;
+		return {
+			requestCount: this.requestCount,
+			recentRequests,
+			provider: config.provider,
+			cacheStats: this.cache.getDetailedStats() as unknown as Record<
+				string,
+				unknown
+			>,
+		};
+	}
 
-    return (
-      recentRequests <
-        (config.rateLimit?.maxRequestsPerMinute ||
-          RATE_LIMIT_CONSTANTS.DEFAULT_MAX_REQUESTS_PER_MINUTE) &&
-      hourlyRequests <
-        (config.rateLimit?.maxRequestsPerHour || RATE_LIMIT_CONSTANTS.DEFAULT_MAX_REQUESTS_PER_HOUR)
-    );
-  }
+	private sanitizeString(input: string): string {
+		if (typeof input !== "string") return "";
 
-  private recordRequest(): void {
-    this.requestCount++;
-    this.requestTimes.push(Date.now());
-  }
+		const cleanInput = input
+			.split("")
+			.filter((char) => {
+				const code = char.charCodeAt(0);
+				return !(
+					code < 32 ||
+					(code >= 127 && code <= 159) ||
+					char === "<" ||
+					char === ">"
+				);
+			})
+			.join("");
 
-  getStats(): {
-    requestCount: number;
-    recentRequests: number;
-    provider: string;
-    cacheStats: Record<string, unknown>;
-  } {
-    const config = this.configManager.getAIConfig();
-    const recentRequests = this.requestTimes.filter(
-      (time) => time > Date.now() - TIME_CONSTANTS.ONE_MINUTE
-    ).length;
+		return cleanInput.substring(
+			0,
+			VALIDATION_CONSTANTS.MAX_CONFIG_FILE_SIZE / 1024,
+		);
+	}
 
-    return {
-      requestCount: this.requestCount,
-      recentRequests,
-      provider: config.provider,
-      cacheStats: this.cache.getDetailedStats() as unknown as Record<string, unknown>,
-    };
-  }
+	private sanitizeContext(
+		context?: Record<string, unknown>,
+	): Record<string, unknown> {
+		if (!context || typeof context !== "object" || context === null) return {};
 
-  private sanitizeString(input: string): string {
-    if (typeof input !== 'string') return '';
+		const sanitized: Record<string, unknown> = {};
+		const maxKeys = 50;
+		let keyCount = 0;
 
-    const cleanInput = input
-      .split('')
-      .filter((char) => {
-        const code = char.charCodeAt(0);
-        return !(code < 32 || (code >= 127 && code <= 159) || char === '<' || char === '>');
-      })
-      .join('');
+		for (const [key, value] of Object.entries(context)) {
+			if (keyCount >= maxKeys) break;
 
-    return cleanInput.substring(0, VALIDATION_CONSTANTS.MAX_CONFIG_FILE_SIZE / 1024);
-  }
+			const sanitizedKey = this.sanitizeString(key);
+			if (sanitizedKey.length === 0) continue;
 
-  private sanitizeContext(context?: Record<string, unknown>): Record<string, unknown> {
-    if (!context || typeof context !== 'object' || context === null) return {};
+			sanitized[sanitizedKey] = this.sanitizeValue(value);
+			keyCount++;
+		}
 
-    const sanitized: Record<string, unknown> = {};
-    const maxKeys = 50;
-    let keyCount = 0;
+		return sanitized;
+	}
 
-    for (const [key, value] of Object.entries(context)) {
-      if (keyCount >= maxKeys) break;
+	private sanitizeValue(value: unknown): unknown {
+		if (typeof value === "string") {
+			return this.sanitizeString(value);
+		}
 
-      const sanitizedKey = this.sanitizeString(key);
-      if (sanitizedKey.length === 0) continue;
+		if (typeof value === "number" || typeof value === "boolean") {
+			return value;
+		}
 
-      sanitized[sanitizedKey] = this.sanitizeValue(value);
-      keyCount++;
-    }
+		if (value && typeof value === "object") {
+			return this.sanitizeObject(value);
+		}
 
-    return sanitized;
-  }
+		if (value !== null && value !== undefined) {
+			return String(value).substring(0, 100);
+		}
 
-  private sanitizeValue(value: unknown): unknown {
-    if (typeof value === 'string') {
-      return this.sanitizeString(value);
-    }
+		return value;
+	}
 
-    if (typeof value === 'number' || typeof value === 'boolean') {
-      return value;
-    }
+	private sanitizeObject(value: object): string {
+		try {
+			const stringified = JSON.stringify(value);
+			if (stringified.length < 1000) {
+				return "[Object]";
+			}
+		} catch {
+			return "[Unserializable]";
+		}
+		return "[Object]";
+	}
 
-    if (value && typeof value === 'object') {
-      return this.sanitizeObject(value);
-    }
+	async translateLog(
+		message: string,
+		level: LogLevel,
+		data?: unknown,
+	): Promise<string> {
+		const config = this.configManager.getAIConfig();
 
-    if (value !== null && value !== undefined) {
-      return String(value).substring(0, 100);
-    }
+		if (!config.enabled || !config.translateLogs) {
+			return message;
+		}
 
-    return value;
-  }
+		if (!config.translateLogLevels.includes(level)) {
+			return message;
+		}
 
-  private sanitizeObject(value: object): string {
-    try {
-      const stringified = JSON.stringify(value);
-      if (stringified.length < 1000) {
-        return '[Object]';
-      }
-    } catch {
-      return '[Unserializable]';
-    }
-    return '[Object]';
-  }
+		try {
+			const startTime = Date.now();
 
-  async translateLog(message: string, level: LogLevel, data?: unknown): Promise<string> {
-    const config = this.configManager.getAIConfig();
+			const context = {
+				level: LogLevel[level],
+				timestamp: new Date().toISOString(),
+				data: data ? this.sanitizeContext({ data }) : undefined,
+			};
 
-    if (!config.enabled || !config.translateLogs) {
-      return message;
-    }
+			const translatedMessage = await this.generateLogTranslation(
+				message,
+				context,
+			);
 
-    if (!config.translateLogLevels.includes(level)) {
-      return message;
-    }
+			const processingTime = Date.now() - startTime;
+			internalLogger.info("Log translation completed", {
+				originalLength: message.length,
+				translatedLength: translatedMessage.length,
+				processingTime,
+			});
 
-    try {
-      const startTime = Date.now();
+			this.recordRequest();
+			return translatedMessage;
+		} catch (error) {
+			internalLogger.warn("Log translation failed, using original message", {
+				error,
+				originalMessage: message,
+			});
+			return message;
+		}
+	}
 
-      const context = {
-        level: LogLevel[level],
-        timestamp: new Date().toISOString(),
-        data: data ? this.sanitizeContext({ data }) : undefined,
-      };
+	private async generateLogTranslation(
+		message: string,
+		context: Record<string, unknown>,
+	): Promise<string> {
+		const config = this.configManager.getAIConfig();
 
-      const translatedMessage = await this.generateLogTranslation(message, context);
+		switch (config.provider) {
+			case "ollama":
+				return await this.generateOllamaTranslation(message, context);
+			case "openai":
+				return await this.generateOpenAITranslation(message, context);
+			case "claude":
+				return await this.generateClaudeTranslation(message, context);
+			default:
+				return message;
+		}
+	}
 
-      const processingTime = Date.now() - startTime;
-      internalLogger.info('Log translation completed', {
-        originalLength: message.length,
-        translatedLength: translatedMessage.length,
-        processingTime,
-      });
+	private async generateOllamaTranslation(
+		message: string,
+		context: Record<string, unknown>,
+	): Promise<string> {
+		if (!this.ollama) {
+			throw new Error("Ollama not initialized");
+		}
 
-      this.recordRequest();
-      return translatedMessage;
-    } catch (error) {
-      internalLogger.warn('Log translation failed, using original message', {
-        error,
-        originalMessage: message,
-      });
-      return message;
-    }
-  }
+		const config = this.configManager.getAIConfig();
+		const prompt = this.buildTranslationPrompt(message, context);
 
-  private async generateLogTranslation(
-    message: string,
-    context: Record<string, unknown>
-  ): Promise<string> {
-    const config = this.configManager.getAIConfig();
+		const response = await this.ollama.generate({
+			model: config.ollama?.model || "llama3.2:3b",
+			prompt,
+			options: {
+				temperature: config.ollama?.temperature || 0.3,
+				num_predict: config.ollama?.maxTokens || 200,
+			},
+			stream: false,
+		});
 
-    switch (config.provider) {
-      case 'ollama':
-        return await this.generateOllamaTranslation(message, context);
-      case 'openai':
-        return await this.generateOpenAITranslation(message, context);
-      case 'claude':
-        return await this.generateClaudeTranslation(message, context);
-      default:
-        return message;
-    }
-  }
+		return this.parseTranslationResponse(response.response);
+	}
 
-  private async generateOllamaTranslation(
-    message: string,
-    context: Record<string, unknown>
-  ): Promise<string> {
-    if (!this.ollama) {
-      throw new Error('Ollama not initialized');
-    }
+	private async generateOpenAITranslation(
+		message: string,
+		context: Record<string, unknown>,
+	): Promise<string> {
+		if (!this.openai) {
+			throw new Error("OpenAI not initialized");
+		}
 
-    const config = this.configManager.getAIConfig();
-    const prompt = this.buildTranslationPrompt(message, context);
+		const config = this.configManager.getAIConfig();
+		const prompt = this.buildTranslationPrompt(message, context);
 
-    const response = await this.ollama.generate({
-      model: config.ollama?.model || 'llama3.2:3b',
-      prompt,
-      options: {
-        temperature: config.ollama?.temperature || 0.3,
-        num_predict: config.ollama?.maxTokens || 200,
-      },
-      stream: false,
-    });
+		const response = await this.openai.chat.completions.create({
+			model: config.openai?.model || "gpt-3.5-turbo",
+			messages: [
+				{
+					role: "system",
+					content:
+						"You are a helpful assistant that translates technical log messages into clear, human-readable explanations.",
+				},
+				{
+					role: "user",
+					content: prompt,
+				},
+			],
+			max_tokens: config.openai?.maxTokens || 200,
+			temperature: config.openai?.temperature || 0.3,
+		});
 
-    return this.parseTranslationResponse(response.response);
-  }
+		return this.parseTranslationResponse(
+			response.choices[0]?.message?.content || message,
+		);
+	}
 
-  private async generateOpenAITranslation(
-    message: string,
-    context: Record<string, unknown>
-  ): Promise<string> {
-    if (!this.openai) {
-      throw new Error('OpenAI not initialized');
-    }
+	private async generateClaudeTranslation(
+		message: string,
+		_context: Record<string, unknown>,
+	): Promise<string> {
+		return message;
+	}
 
-    const config = this.configManager.getAIConfig();
-    const prompt = this.buildTranslationPrompt(message, context);
+	private buildTranslationPrompt(
+		message: string,
+		context: Record<string, unknown>,
+	): string {
+		const config = this.configManager.getAIConfig();
+		const customPrompt = config.prompts?.logTranslation;
 
-    const response = await this.openai.chat.completions.create({
-      model: config.openai?.model || 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are a helpful assistant that translates technical log messages into clear, human-readable explanations.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      max_tokens: config.openai?.maxTokens || 200,
-      temperature: config.openai?.temperature || 0.3,
-    });
+		if (customPrompt) {
+			return customPrompt
+				.replace("{message}", message)
+				.replace("{context}", JSON.stringify(context, null, 2));
+		}
 
-    return this.parseTranslationResponse(response.choices[0]?.message?.content || message);
-  }
+		const levelStr = (context.level as string) || "INFO";
+		const dataStr = context.data
+			? `\nAdditional data: ${JSON.stringify(context.data, null, 2)}`
+			: "";
 
-  private async generateClaudeTranslation(
-    message: string,
-    _context: Record<string, unknown>
-  ): Promise<string> {
-    return message;
-  }
-
-  private buildTranslationPrompt(message: string, context: Record<string, unknown>): string {
-    const config = this.configManager.getAIConfig();
-    const customPrompt = config.prompts?.logTranslation;
-
-    if (customPrompt) {
-      return customPrompt
-        .replace('{message}', message)
-        .replace('{context}', JSON.stringify(context, null, 2));
-    }
-
-    const levelStr = (context.level as string) || 'INFO';
-    const dataStr = context.data
-      ? `\nAdditional data: ${JSON.stringify(context.data, null, 2)}`
-      : '';
-
-    return `Please translate this technical ${levelStr} log message into a clear, human-readable explanation that a non-technical person could understand. Keep it concise but informative:
+		return `Please translate this technical ${levelStr} log message into a clear, human-readable explanation that a non-technical person could understand. Keep it concise but informative:
 
 Technical log message: "${message}"${dataStr}
 
 Provide only the human-readable translation without any additional formatting or explanations.`;
-  }
+	}
 
-  private parseTranslationResponse(response: string): string {
-    let cleaned = response.trim();
+	private parseTranslationResponse(response: string): string {
+		let cleaned = response.trim();
 
-    const prefixes = [
-      'Human-readable translation:',
-      'Translation:',
-      'Explanation:',
-      'The message means:',
-      'This means:',
-    ];
+		const prefixes = [
+			"Human-readable translation:",
+			"Translation:",
+			"Explanation:",
+			"The message means:",
+			"This means:",
+		];
 
-    for (const prefix of prefixes) {
-      if (cleaned.toLowerCase().startsWith(prefix.toLowerCase())) {
-        cleaned = cleaned.substring(prefix.length).trim();
-      }
-    }
+		for (const prefix of prefixes) {
+			if (cleaned.toLowerCase().startsWith(prefix.toLowerCase())) {
+				cleaned = cleaned.substring(prefix.length).trim();
+			}
+		}
 
-    if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
-      cleaned = cleaned.slice(1, -1);
-    }
+		if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+			cleaned = cleaned.slice(1, -1);
+		}
 
-    return cleaned || response;
-  }
+		return cleaned || response;
+	}
 }
