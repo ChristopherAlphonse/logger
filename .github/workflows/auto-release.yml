@@ -45,9 +45,15 @@ jobs:
 
       - name: Run CI checks
         run: |
+          # Run Biome checks
           pnpm biome:fix-and-check
+          pnpm check
+
+          # Run other checks
           pnpm type-check
           pnpm test
+
+          # Build the package
           pnpm build
 
       - name: Get current version
