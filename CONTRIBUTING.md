@@ -7,7 +7,7 @@ Thank you for your interest in contributing to @calphonse/logger! This document 
 ### Prerequisites
 
 - Node.js >= 18.0.0
-- pnpm >= 8.15.0
+- pnpm >= 10.18.3
 
 ### Getting Started
 
