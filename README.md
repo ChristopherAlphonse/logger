@@ -169,15 +169,6 @@ app.use((err, req, res, next) => {
 });
 ```
 
-## Security Features
-
-- **Input validation** on all configuration
-- **AI prompt sanitization** prevents injection attacks
-- **Output stream validation** ensures safe logging destinations
-- **Memory limits** prevent resource exhaustion
-- **Safe defaults** for all options
-
-
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
