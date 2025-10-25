@@ -15,8 +15,8 @@ dependencies:
     specifier: 0.5.17
     version: 0.5.17
   openai:
-    specifier: 5.20.1
-    version: 5.20.1
+    specifier: 6.7.0
+    version: 6.7.0
 
 devDependencies:
   '@biomejs/biome':
@@ -4620,12 +4620,12 @@ packages:
       mimic-fn: 4.0.0
     dev: true
 
-  /openai@5.20.1:
-    resolution: {integrity: sha512-UndCB0R5V3iB9I98NyF69zNP6YfwU4+Fjk0eW4HhooTm+Awlpm/MGjJTwJsyNV/qkH1NJi0GG+9odwukGTqExQ==}
+  /openai@6.7.0:
+    resolution: {integrity: sha512-mgSQXa3O/UXTbA8qFzoa7aydbXBJR5dbLQXCRapAOtoNT+v69sLdKMZzgiakpqhclRnhPggPAXoniVGn2kMY2A==}
     hasBin: true
     peerDependencies:
       ws: ^8.18.0
-      zod: ^3.23.8
+      zod: ^3.25 || ^4.0
     peerDependenciesMeta:
       ws:
         optional: true
