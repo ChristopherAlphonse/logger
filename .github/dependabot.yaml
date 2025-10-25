@@ -4,15 +4,17 @@ updates:
     directory: '/'
     schedule:
       interval: 'daily'
-      cron: '0 5 * * *'
-      open-pull-requests-limit: 10
-      groups:
-        nextjs:
-          patterns: ['@next/*', 'next*']
-          update-types: ['major', 'minor', 'patch']
-        react-core:
-          patterns: ['react', 'react-dom']
-          update-types: ['major', 'minor', 'patch']
-        typescript:
-          patterns: ['typescript', '@types/*', 'typescript-eslint/*']
-          update-types: ['major', 'minor', 'patch']
+      # Prefer 'time' for daily schedules; cron is allowed but not required here
+      time: '05:00'
+    # Limit and grouping are top-level keys for the update entry (not inside schedule)
+    open-pull-requests-limit: 10
+    groups:
+      nextjs:
+        patterns: ['@next/*', 'next*']
+        update-types: ['major', 'minor', 'patch']
+      react-core:
+        patterns: ['react', 'react-dom']
+        update-types: ['major', 'minor', 'patch']
+      typescript:
+        patterns: ['typescript', '@types/*', 'typescript-eslint/*']
+        update-types: ['major', 'minor', 'patch']
