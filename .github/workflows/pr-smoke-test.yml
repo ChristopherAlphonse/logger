@@ -1,5 +1,8 @@
 name: PR Checks
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     branches:
@@ -25,7 +28,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 8
+          package_json_file: tools-versions.json
 
       - name: Install
         run: pnpm install --frozen-lockfile

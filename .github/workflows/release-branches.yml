@@ -1,5 +1,9 @@
 name: Release branch CI
 
+permissions:
+  contents: read
+  issues: write
+
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -20,7 +24,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 8
+          package_json_file: tools-versions.json
 
       - name: Install
         run: pnpm install --frozen-lockfile

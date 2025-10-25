@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main, develop]
@@ -37,7 +40,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 8.15.0
+          package_json_file: tools-versions.json
 
       - name: Get pnpm store directory
         shell: bash
@@ -99,7 +102,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 8.15.0
+          package_json_file: tools-versions.json
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

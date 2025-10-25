@@ -40,7 +40,7 @@ jobs:
 
             **Why was this closed?**
             - No activity for 30 days total (23 days + 7 day grace period)
-            - Marked as stale 7 days ago with no subsequent activity1
+            - Marked as stale 7 days ago with no subsequent activity
 
             **Want to reopen?**
             - You can reopen this PR at any time if you want to continue working on it
