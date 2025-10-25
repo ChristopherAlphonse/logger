@@ -1,0 +1,215 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  analyze:
+    name: Analyze release type
+    runs-on: ubuntu-latest
+    outputs:
+      release-type: ${{ steps.analyze.outputs.release-type }}
+      new-release-published: ${{ steps.analyze.outputs.new-release-published }}
+      new-release-version: ${{ steps.analyze.outputs.new-release-version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: tools-versions.json
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Analyze commits for release type
+        id: analyze
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Run semantic-release in dry-run mode to analyze what would happen
+          npx semantic-release --dry-run > release-analysis.txt 2>&1 || true
+
+          # Parse the output to determine release type
+          if grep -q "Published release" release-analysis.txt; then
+            echo "new-release-published=true" >> $GITHUB_OUTPUT
+
+            # Extract version from the output
+            VERSION=$(grep "Published release" release-analysis.txt | sed -n 's/.*Published release \([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' | head -1)
+            echo "new-release-version=$VERSION" >> $GITHUB_OUTPUT
+
+            # Determine if it's a major release
+            if echo "$VERSION" | grep -E '^[1-9][0-9]*\.0\.0$' > /dev/null; then
+              echo "release-type=major" >> $GITHUB_OUTPUT
+            else
+              echo "release-type=minor-or-patch" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "new-release-published=false" >> $GITHUB_OUTPUT
+            echo "release-type=none" >> $GITHUB_OUTPUT
+            echo "new-release-version=" >> $GITHUB_OUTPUT
+          fi
+
+          cat release-analysis.txt
+
+  create-major-pr:
+    name: Create PR for major release
+    runs-on: ubuntu-latest
+    needs: analyze
+    if: needs.analyze.outputs.release-type == 'major'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run quality checks
+        run: |
+          pnpm biome:fix-and-check
+          pnpm type-check
+          pnpm test
+          pnpm build
+
+      - name: Create release branch and PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH_NAME="release/v${{ needs.analyze.outputs.new-release-version }}"
+          git checkout -b "$BRANCH_NAME"
+          git push origin "$BRANCH_NAME"
+
+          # Create PR using GitHub CLI
+          gh pr create \
+            --title " Major Release v${{ needs.analyze.outputs.new-release-version }}" \
+            --body "##  Major Release v${{ needs.analyze.outputs.new-release-version }}
+
+          This is a **major version release** that contains breaking changes and requires manual review.
+
+          ### Breaking Changes Detected
+          This release contains commits with \`BREAKING CHANGE\` or similar markers that will bump the major version.
+
+          ### Review Checklist
+          - [ ] Review all breaking changes
+          - [ ] Update documentation if needed
+          - [ ] Verify backward compatibility strategy
+          - [ ] Confirm migration guide is ready
+
+          ### What happens when merged?
+          - Version will be bumped to v${{ needs.analyze.outputs.new-release-version }}
+          - Package will be published to npm
+          - GitHub release will be created
+          - Changelog will be updated
+
+          **Merge this PR to proceed with the major release.**" \
+            --label "major-release,breaking-change,needs-review" \
+            --reviewer "ChristopherAlphonse" \
+            --base main \
+            --head "$BRANCH_NAME"
+
+  auto-release:
+    name: Auto-release (minor/patch)
+    runs-on: ubuntu-latest
+    needs: analyze
+    if: needs.analyze.outputs.release-type == 'minor-or-patch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run quality checks and build
+        run: |
+          pnpm biome:fix-and-check
+          pnpm type-check
+          pnpm test
+          pnpm build
+
+      - name: Run semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm exec semantic-release
+
+  major-release:
+    name: Execute major release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/v') && contains(github.ref, '.0.0')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run quality checks and build
+        run: |
+          pnpm biome:fix-and-check
+          pnpm type-check
+          pnpm test
+          pnpm build
+
+      - name: Run semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm exec semantic-release

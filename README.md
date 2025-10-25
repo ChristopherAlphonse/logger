@@ -68,7 +68,7 @@ logger.error('Database error', new Error('Connection refused'));
 ### Setup AI (Optional)
 
 ```bash
-# Local AI (free)
+
 curl -fsSL https://ollama.ai/install.sh | sh
 ollama pull llama3.2:3b
 
@@ -127,7 +127,7 @@ logger.info(message: string, data?: any): void
 logger.debug(message: string, data?: any): void
 logger.trace(message: string, data?: any): void
 
-logger.table(data: any[]): void 
+logger.table(data: any[]): void
 logger.child(prefix: string): Logger
 logger.setLevel(level: LogLevel): void
 ```
@@ -152,7 +152,7 @@ import { logger } from '@calphonse/logger';
 
 const app = express();
 
-// Request logging
+
 app.use((req, res, next) => {
   logger.info('Request', {
     method: req.method,
@@ -162,9 +162,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Error handling with AI analysis
+
 app.use((err, req, res, next) => {
-  logger.error('Request failed', err); 
+  logger.error('Request failed', err);
   res.status(500).json({ error: 'Internal server error' });
 });
 ```
@@ -175,6 +175,6 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-**Made with ❤️ for the Node.js community**
+**Made with care for the Node.js community**
 
-If this logger helps you debug faster, please give it a ⭐ on GitHub!
+If this logger helps you debug faster, please give it a star on GitHub!

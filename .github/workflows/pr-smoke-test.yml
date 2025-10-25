@@ -1,0 +1,40 @@
+name: PR Checks
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  pr-ci:
+    name: PR CI (lint, types, tests)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: tools-versions.json
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Run lint, type-check and tests
+        run: |
+          pnpm biome:fix-and-check || true
+          pnpm type-check
+          pnpm test

@@ -1,0 +1,11 @@
+{
+  "packageManager": "pnpm@8.15.0",
+  "node": "20.x",
+  "devDependencies": {
+    "biome": "^1.9.4",
+    "jest": "^29.7.0",
+    "typescript": "^5.6.3",
+    "vite": "^7.0.5"
+  },
+  "notes": "Single source-of-truth file. The 'packageManager' field is intentionally a string so GitHub Actions' pnpm/action-setup can read it via the 'package_json_file' input. Keep this file updated when you bump tool versions."
+}
