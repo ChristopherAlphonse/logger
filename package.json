@@ -50,7 +50,7 @@
   "dependencies": {
     "chalk": "^5.3.0",
     "crypto-js": "^4.2.0",
-    "ollama": "0.5.17",
+    "ollama": "0.6.0",
     "openai": "5.20.1"
   },
   "devDependencies": {

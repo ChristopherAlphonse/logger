@@ -12,8 +12,8 @@ dependencies:
     specifier: ^4.2.0
     version: 4.2.0
   ollama:
-    specifier: 0.5.17
-    version: 0.5.17
+    specifier: 0.6.0
+    version: 0.6.0
   openai:
     specifier: 5.20.1
     version: 5.20.1
@@ -4594,8 +4594,8 @@ packages:
       - which
       - write-file-atomic
 
-  /ollama@0.5.17:
-    resolution: {integrity: sha512-q5LmPtk6GLFouS+3aURIVl+qcAOPC4+Msmx7uBb3pd+fxI55WnGjmLZ0yijI/CYy79x0QPGx3BwC3u5zv9fBvQ==}
+  /ollama@0.6.0:
+    resolution: {integrity: sha512-FHjdU2Ok5x2HZsxPui/MBJZ5J+HzmxoWYa/p9wk736eT+uAhS8nvIICar5YgwlG5MFNjDR6UA5F3RSKq+JseOA==}
     dependencies:
       whatwg-fetch: 3.6.20
     dev: false
