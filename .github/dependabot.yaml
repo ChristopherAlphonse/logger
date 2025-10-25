@@ -4,10 +4,10 @@ updates:
     directory: '/'
     schedule:
       interval: 'daily'
-      # Prefer 'time' for daily schedules; cron is allowed but not required here
+
       time: '05:00'
-    # Limit and grouping are top-level keys for the update entry (not inside schedule)
-    open-pull-requests-limit: 10
+
+    open-pull-requests-limit: 5
     groups:
       nextjs:
         patterns: ['@next/*', 'next*']
