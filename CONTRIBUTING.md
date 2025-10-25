@@ -6,23 +6,26 @@ Thank you for your interest in contributing to @calphonse/logger! This document 
 
 ### Prerequisites
 
-- Node.js >= 18.0.0
+- Node.js >= 20.0.0
 - pnpm >= 8.15.0
 
 ### Getting Started
 
 1. **Fork and clone the repository**
+
    ```bash
    git clone https://github.com/your-username/logger.git
    cd logger
    ```
 
 2. **Install pnpm (if not already installed)**
+
    ```bash
    npm install -g pnpm
    ```
 
 3. **Install dependencies**
+
    ```bash
    pnpm install
    ```
@@ -95,17 +98,20 @@ For the best development experience, install the Biome extension for your IDE:
 ### Before Submitting a PR
 
 1. **Ensure your code follows the project's style guidelines**
+
    ```bash
    pnpm check:fix
    ```
 
 2. **Run the full test suite**
+
    ```bash
    pnpm test
    pnpm test:coverage
    ```
 
 3. **Check TypeScript types**
+
    ```bash
    pnpm type-check
    ```
@@ -135,6 +141,7 @@ type(scope): description
 ```
 
 Examples:
+
 - `feat(logger): add support for custom log levels`
 - `fix(types): correct return type for logger.child()`
 - `docs(readme): update installation instructions`

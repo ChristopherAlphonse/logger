@@ -7,11 +7,17 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "ignore": ["node_modules/**", "dist/**", "coverage/**", "*.min.js", "*.bundle.js"]
+    "ignore": [
+      "node_modules/**",
+      "dist/**",
+      "coverage/**",
+      "*.min.js",
+      "*.bundle.js"
+    ]
   },
   "overrides": [
     {
-      "include": ["examples/**", "setup-ai-config.ts"],
+      "include": ["examples/**"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -50,9 +56,6 @@
         "noExcessiveCognitiveComplexity": "warn"
       }
     }
-  },
-  "organizeImports": {
-    "enabled": true
   },
   "javascript": {
     "formatter": {
