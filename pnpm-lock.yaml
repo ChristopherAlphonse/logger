@@ -72,10 +72,10 @@ devDependencies:
     version: 5.9.3
   vite:
     specifier: ^7.0.5
-    version: 7.1.11(@types/node@24.9.1)(tsx@4.20.5)
+    version: 7.1.12(@types/node@24.9.1)(tsx@4.20.5)
   vite-plugin-dts:
     specifier: ^4.5.4
-    version: 4.5.4(@types/node@24.9.1)(typescript@5.9.3)(vite@7.1.11)
+    version: 4.5.4(@types/node@24.9.1)(typescript@5.9.3)(vite@7.1.12)
 
 packages:
 
@@ -5787,7 +5787,7 @@ packages:
       spdx-expression-parse: 3.0.1
     dev: true
 
-  /vite-plugin-dts@4.5.4(@types/node@24.9.1)(typescript@5.9.3)(vite@7.1.11):
+  /vite-plugin-dts@4.5.4(@types/node@24.9.1)(typescript@5.9.3)(vite@7.1.12):
     resolution: {integrity: sha512-d4sOM8M/8z7vRXHHq/ebbblfaxENjogAAekcfcDCCwAyvGqnPrc7f4NZbvItS+g4WTgerW0xDwSz5qz11JT3vg==}
     peerDependencies:
       typescript: '*'
@@ -5806,15 +5806,15 @@ packages:
       local-pkg: 1.1.2
       magic-string: 0.30.19
       typescript: 5.9.3
-      vite: 7.1.11(@types/node@24.9.1)(tsx@4.20.5)
+      vite: 7.1.12(@types/node@24.9.1)(tsx@4.20.5)
     transitivePeerDependencies:
       - '@types/node'
       - rollup
       - supports-color
     dev: true
 
-  /vite@7.1.11(@types/node@24.9.1)(tsx@4.20.5):
-    resolution: {integrity: sha512-uzcxnSDVjAopEUjljkWh8EIrg6tlzrjFUfMcR1EVsRDGwf/ccef0qQPRyOrROwhrTDaApueq+ja+KLPlzR/zdg==}
+  /vite@7.1.12(@types/node@24.9.1)(tsx@4.20.5):
+    resolution: {integrity: sha512-ZWyE8YXEXqJrrSLvYgrRP7p62OziLW7xI5HYGWFzOvupfAlrLvURSzv/FyGyy0eidogEM3ujU+kUG1zuHgb6Ug==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
