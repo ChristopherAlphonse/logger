@@ -146,7 +146,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .npm-release
-          TARBALL="$(npm pack --pack-destination .npm-release --json | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => console.log(JSON.parse(data)[0].filename));")"
+          TARBALL="$(npm pack --ignore-scripts --pack-destination .npm-release --json | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => console.log(JSON.parse(data)[0].filename));")"
           echo "tarball=.npm-release/$TARBALL" >> "$GITHUB_OUTPUT"
           echo "Packed $TARBALL"
 
