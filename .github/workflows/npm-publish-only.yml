@@ -1,0 +1,180 @@
+name: NPM Publish Only
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'GitHub release tag to publish, or "latest" for the latest GitHub release'
+        required: true
+        default: latest
+        type: string
+      dist_tag:
+        description: 'npm dist-tag to publish under'
+        required: true
+        default: latest
+        type: choice
+        options:
+          - latest
+          - next
+          - canary
+      dry_run:
+        description: 'Run all checks and npm publish --dry-run without publishing'
+        required: true
+        default: false
+        type: boolean
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-publish-${{ github.event.release.tag_name || inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  resolve-release:
+    name: Resolve release tag
+    runs-on: ubuntu-latest
+    outputs:
+      release-tag: ${{ steps.resolve.outputs.release-tag }}
+    steps:
+      - name: Resolve GitHub release tag
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_TAG: ${{ inputs.release_tag || github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          elif [ "$REQUESTED_TAG" = "latest" ]; then
+            TAG="$(gh release view latest --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)"
+          else
+            TAG="$REQUESTED_TAG"
+          fi
+
+          if ! echo "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$'; then
+            echo "::error::Refusing to publish from non-semver release tag: $TAG"
+            exit 1
+          fi
+
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+          echo "release-tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Resolved release tag: $TAG"
+
+  publish:
+    name: Publish package to npm
+    runs-on: ubuntu-latest
+    needs: resolve-release
+    env:
+      NODE_VERSION: 24.11.0
+      RELEASE_TAG: ${{ needs.resolve-release.outputs.release-tag }}
+      NPM_DIST_TAG: ${{ inputs.dist_tag || 'latest' }}
+      DRY_RUN: ${{ inputs.dry_run || 'false' }}
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: tools-versions.json
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify release version
+        id: version
+        run: |
+          set -euo pipefail
+
+          PACKAGE_NAME="$(node -p "require('./package.json').name")"
+          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
+          EXPECTED_VERSION="${RELEASE_TAG#v}"
+
+          if [ "$PACKAGE_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "::error::package.json version $PACKAGE_VERSION does not match release tag $RELEASE_TAG"
+            exit 1
+          fi
+
+          if npm view "$PACKAGE_NAME@$PACKAGE_VERSION" version >/dev/null 2>&1; then
+            echo "already-published=true" >> "$GITHUB_OUTPUT"
+            echo "npm already has $PACKAGE_NAME@$PACKAGE_VERSION; skipping publish."
+          else
+            echo "already-published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "package-name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "package-version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Security audit
+        if: steps.version.outputs.already-published != 'true'
+        run: pnpm audit --audit-level moderate
+
+      - name: Type check
+        if: steps.version.outputs.already-published != 'true'
+        run: pnpm type-check
+
+      - name: Test
+        if: steps.version.outputs.already-published != 'true'
+        run: pnpm test -- --runInBand
+
+      - name: Lint
+        if: steps.version.outputs.already-published != 'true'
+        run: pnpm lint
+
+      - name: Build
+        if: steps.version.outputs.already-published != 'true'
+        run: pnpm build
+
+      - name: Pack release tarball
+        if: steps.version.outputs.already-published != 'true'
+        id: pack
+        run: |
+          set -euo pipefail
+          mkdir -p .npm-release
+          TARBALL="$(npm pack --pack-destination .npm-release --json | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => console.log(JSON.parse(data)[0].filename));")"
+          echo "tarball=.npm-release/$TARBALL" >> "$GITHUB_OUTPUT"
+          echo "Packed $TARBALL"
+
+      - name: Publish to npm
+        if: steps.version.outputs.already-published != 'true'
+        run: |
+          set -euo pipefail
+
+          if [ "$DRY_RUN" = "true" ]; then
+            npm publish "${{ steps.pack.outputs.tarball }}" \
+              --access public \
+              --tag "$NPM_DIST_TAG" \
+              --dry-run
+          else
+            npm publish "${{ steps.pack.outputs.tarball }}" \
+              --access public \
+              --tag "$NPM_DIST_TAG" \
+              --provenance
+          fi
+
+      - name: Summary
+        run: |
+          {
+            echo "## npm publish only"
+            echo ""
+            echo "- Release tag: \`$RELEASE_TAG\`"
+            echo "- Package: \`${{ steps.version.outputs.package-name }}@${{ steps.version.outputs.package-version }}\`"
+            echo "- npm dist-tag: \`$NPM_DIST_TAG\`"
+            echo "- Dry run: \`$DRY_RUN\`"
+            echo "- Already published: \`${{ steps.version.outputs.already-published }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

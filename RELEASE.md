@@ -169,6 +169,16 @@ pnpm quality
 **Emergency manual release:**
 Use the "Auto Release (manual)" workflow via GitHub Actions UI for emergency releases outside the normal flow.
 
+**npm-only publish recovery:**
+Use the "NPM Publish Only" workflow when a GitHub release/tag already exists but npm did not publish.
+Run it from the Actions tab with:
+
+- `release_tag`: `latest` or a specific tag such as `v1.3.0`
+- `dist_tag`: `latest`
+- `dry_run`: `false` to publish, `true` to verify without publishing
+
+This workflow publishes only to npm. It does not create GitHub releases or tags, and it skips safely if the package version is already present on npm.
+
 ---
 
 ## Quick Reference
