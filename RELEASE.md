@@ -175,6 +175,7 @@ Run it from the Actions tab with:
 
 - `release_tag`: `latest` or a specific tag such as `v1.3.0`
 - `dist_tag`: `latest`
+- `auth_mode`: `trusted-publishing` when npm package trusted publishing is configured, or `token` for `NPM_TOKEN`
 - `dry_run`: `false` to publish, `true` to verify without publishing
 
 This workflow publishes only to npm. It does not create GitHub releases or tags, and it skips safely if the package version is already present on npm.

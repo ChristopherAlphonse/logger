@@ -17,6 +17,14 @@ on:
           - latest
           - next
           - canary
+      auth_mode:
+        description: 'npm authentication mode'
+        required: true
+        default: trusted-publishing
+        type: choice
+        options:
+          - trusted-publishing
+          - token
       dry_run:
         description: 'Run all checks and npm publish --dry-run without publishing'
         required: true
@@ -74,7 +82,7 @@ jobs:
       RELEASE_TAG: ${{ needs.resolve-release.outputs.release-tag }}
       NPM_DIST_TAG: ${{ inputs.dist_tag || 'latest' }}
       DRY_RUN: ${{ inputs.dry_run || 'false' }}
-      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      NPM_AUTH_MODE: ${{ inputs.auth_mode || 'trusted-publishing' }}
     steps:
       - name: Checkout release tag
         uses: actions/checkout@v4
@@ -150,8 +158,27 @@ jobs:
           echo "tarball=.npm-release/$TARBALL" >> "$GITHUB_OUTPUT"
           echo "Packed $TARBALL"
 
-      - name: Publish to npm
-        if: steps.version.outputs.already-published != 'true'
+      - name: Publish to npm with trusted publishing
+        if: steps.version.outputs.already-published != 'true' && env.NPM_AUTH_MODE == 'trusted-publishing'
+        run: |
+          set -euo pipefail
+
+          if [ "$DRY_RUN" = "true" ]; then
+            npm publish "${{ steps.pack.outputs.tarball }}" \
+              --access public \
+              --tag "$NPM_DIST_TAG" \
+              --dry-run
+          else
+            npm publish "${{ steps.pack.outputs.tarball }}" \
+              --access public \
+              --tag "$NPM_DIST_TAG" \
+              --provenance
+          fi
+
+      - name: Publish to npm with token
+        if: steps.version.outputs.already-published != 'true' && env.NPM_AUTH_MODE == 'token'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
 
@@ -175,6 +202,7 @@ jobs:
             echo "- Release tag: \`$RELEASE_TAG\`"
             echo "- Package: \`${{ steps.version.outputs.package-name }}@${{ steps.version.outputs.package-version }}\`"
             echo "- npm dist-tag: \`$NPM_DIST_TAG\`"
+            echo "- Auth mode: \`$NPM_AUTH_MODE\`"
             echo "- Dry run: \`$DRY_RUN\`"
             echo "- Already published: \`${{ steps.version.outputs.already-published }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
