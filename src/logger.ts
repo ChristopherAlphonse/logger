@@ -4,7 +4,15 @@ import { ConfigManager } from './config-manager';
 import { processConsoleArgs } from './console-utils';
 import { LogFormatter } from './formatters';
 import { createInternalLogger } from './internalLogger';
-import { type ILogger, type LogData, type LogEntry, LogLevel, type LoggerConfig } from './types';
+import { createDefaultOutput } from './output-policy';
+import {
+  type ILogger,
+  type LogData,
+  type LogEntry,
+  LogLevel,
+  type LoggerConfig,
+  type LoggerOutput,
+} from './types';
 import type { AIInsight, ErrorAnalysis } from './types';
 
 const chalk =
@@ -25,18 +33,17 @@ export class Logger implements ILogger {
       showSource: true,
       prefix: '',
       json: false,
-      output:
-        typeof process !== 'undefined' && process.stdout ? process.stdout : { write: console.log },
+      browserConsole: 'localhost',
       ...config,
     };
+    this.config.output ??= createDefaultOutput(this.config.browserConsole);
 
     if (this.config.output && !this.isValidOutputStream(this.config.output)) {
       const internalLogger = createInternalLogger('[LOGGER]');
       internalLogger.warn(
         'Invalid output stream provided in configuration. Falling back to process.stdout. Please check your logger configuration.'
       );
-      this.config.output =
-        typeof process !== 'undefined' && process.stdout ? process.stdout : { write: console.log };
+      this.config.output = createDefaultOutput(this.config.browserConsole);
     }
 
     this.formatter = new LogFormatter();
@@ -159,10 +166,6 @@ export class Logger implements ILogger {
     }
   }
 
-  private getLevelColor(_level: LogLevel): ((text: string) => string) | null {
-    return null;
-  }
-
   private shouldTranslateLog(level: LogLevel): boolean {
     if (!this.aiService) return false;
 
@@ -203,6 +206,7 @@ export class Logger implements ILogger {
 
   setConfig(config: Partial<LoggerConfig>): void {
     this.config = { ...this.config, ...config };
+    this.config.output ??= createDefaultOutput(this.config.browserConsole);
   }
 
   getConfig(): LoggerConfig {
@@ -268,9 +272,7 @@ export class Logger implements ILogger {
   }
 
   private write(output: string): void {
-    const stream =
-      this.config.output ||
-      (typeof process !== 'undefined' && process.stdout ? process.stdout : { write: console.log });
+    const stream = this.config.output || createDefaultOutput(this.config.browserConsole);
     stream.write(output);
   }
 
@@ -358,9 +360,7 @@ export class Logger implements ILogger {
   }
 
   private displayAIInsight(insight: AIInsight): void {
-    const defaultOutput =
-      typeof process !== 'undefined' && process.stdout ? process.stdout.write : console.log;
-    const output = this.config.output?.write || defaultOutput;
+    const output = this.write.bind(this);
     const header = this.config.colors ? chalk.cyan('\nAI Insight:\n') : '\nAI Insight:\n';
     const explanation = this.config.colors
       ? chalk.blue(`   Explanation: ${insight.explanation}\n`)
@@ -460,9 +460,7 @@ export class Logger implements ILogger {
     this.aiService = new AIService();
   }
 
-  private isValidOutputStream(
-    stream: NodeJS.WritableStream | { write: (chunk: string) => void }
-  ): boolean {
+  private isValidOutputStream(stream: LoggerOutput): boolean {
     if (!stream || typeof stream !== 'object') return false;
     if (typeof stream.write !== 'function') return false;
     if (typeof process !== 'undefined' && (stream === process.stdout || stream === process.stderr))

@@ -170,6 +170,106 @@ describe('Logger', () => {
     });
   });
 
+  describe('browser console output policy', () => {
+    const originalProcess = globalThis.process;
+    const originalWindow = (globalThis as typeof globalThis & { window?: unknown }).window;
+    const originalLocation = (globalThis as typeof globalThis & { location?: unknown }).location;
+
+    const setBrowserHost = (hostname: string) => {
+      Object.defineProperty(globalThis, 'process', {
+        value: undefined,
+        configurable: true,
+      });
+      Object.defineProperty(globalThis, 'window', {
+        value: {},
+        configurable: true,
+      });
+      Object.defineProperty(globalThis, 'location', {
+        value: { hostname },
+        configurable: true,
+      });
+    };
+
+    afterEach(() => {
+      Object.defineProperty(globalThis, 'process', {
+        value: originalProcess,
+        configurable: true,
+      });
+
+      if (originalWindow === undefined) {
+        Reflect.deleteProperty(globalThis, 'window');
+      } else {
+        Object.defineProperty(globalThis, 'window', {
+          value: originalWindow,
+          configurable: true,
+        });
+      }
+
+      Object.defineProperty(globalThis, 'location', {
+        value: originalLocation,
+        configurable: true,
+      });
+
+      jest.restoreAllMocks();
+    });
+
+    test('should suppress default browser console output on non-local hosts', () => {
+      setBrowserHost('app.example.com');
+      const infoSpy = jest.spyOn(console, 'info').mockImplementation(() => {});
+
+      const browserLogger = new Logger({ colors: false, showSource: false });
+      browserLogger.info('production browser message');
+
+      expect(infoSpy).not.toHaveBeenCalled();
+    });
+
+    test('should allow default browser console output on localhost', () => {
+      setBrowserHost('localhost');
+      const infoSpy = jest.spyOn(console, 'info').mockImplementation(() => {});
+
+      const browserLogger = new Logger({ colors: false, showSource: false });
+      browserLogger.info('local browser message');
+
+      expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining('local browser message'));
+    });
+
+    test('should allow browser console output on non-local hosts when explicitly enabled', () => {
+      setBrowserHost('app.example.com');
+      const infoSpy = jest.spyOn(console, 'info').mockImplementation(() => {});
+
+      const browserLogger = new Logger({
+        browserConsole: 'always',
+        colors: false,
+        showSource: false,
+      });
+      browserLogger.info('explicit browser message');
+
+      expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining('explicit browser message'));
+    });
+
+    test('should honor explicit output streams even when browser console is disabled', () => {
+      setBrowserHost('app.example.com');
+      const infoSpy = jest.spyOn(console, 'info').mockImplementation(() => {});
+      const writes: string[] = [];
+
+      const browserLogger = new Logger({
+        browserConsole: 'never',
+        colors: false,
+        output: {
+          write: (chunk: string) => {
+            writes.push(chunk);
+            return true;
+          },
+        },
+        showSource: false,
+      });
+      browserLogger.info('custom output message');
+
+      expect(infoSpy).not.toHaveBeenCalled();
+      expect(writes.join('')).toContain('custom output message');
+    });
+  });
+
   describe('child loggers', () => {
     test('should create child logger with prefix', () => {
       const parentLogger = new Logger({ level: LogLevel.INFO });

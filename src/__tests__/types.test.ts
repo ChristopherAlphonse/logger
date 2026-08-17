@@ -84,6 +84,7 @@ describe('Types', () => {
         prefix: 'TEST',
         json: true,
         output: mockStream as unknown as NodeJS.WritableStream,
+        browserConsole: 'localhost',
       };
 
       expect(config.level).toBe(LogLevel.DEBUG);
@@ -94,6 +95,7 @@ describe('Types', () => {
       expect(config.prefix).toBe('TEST');
       expect(config.json).toBe(true);
       expect(config.output).toBe(mockStream);
+      expect(config.browserConsole).toBe('localhost');
     });
 
     it('should allow partial configuration', () => {
