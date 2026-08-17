@@ -79,7 +79,7 @@ export function formatString(
   ...args: unknown[]
 ): { message: string; data?: unknown } {
   let message = format;
-  let data: unknown = undefined;
+  let data: unknown;
   let argIndex = 0;
 
   message = message.replace(/%([sdioOcf])/g, (match, specifier) => {

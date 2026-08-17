@@ -1,3 +1,5 @@
+import { createDefaultOutput } from './output-policy';
+
 class SimpleInternalLogger {
   constructor(private prefix: string) {}
 
@@ -6,11 +8,11 @@ class SimpleInternalLogger {
       ? `${this.prefix} ${message} ${JSON.stringify(data)}\n`
       : `${this.prefix} ${message}\n`;
 
-    if (typeof process !== 'undefined' && process.stderr) {
-      process.stderr.write(output);
-    } else {
-      console.warn(output.trim());
-    }
+    const stream =
+      typeof process !== 'undefined' && process.stderr
+        ? process.stderr
+        : createDefaultOutput('localhost');
+    stream.write(output);
   }
 
   error(message: string, data?: unknown): void {
@@ -18,11 +20,11 @@ class SimpleInternalLogger {
       ? `${this.prefix} ${message} ${JSON.stringify(data)}\n`
       : `${this.prefix} ${message}\n`;
 
-    if (typeof process !== 'undefined' && process.stderr) {
-      process.stderr.write(output);
-    } else {
-      console.error(output.trim());
-    }
+    const stream =
+      typeof process !== 'undefined' && process.stderr
+        ? process.stderr
+        : createDefaultOutput('localhost');
+    stream.write(output);
   }
 
   info(message: string, data?: unknown): void {
@@ -30,11 +32,7 @@ class SimpleInternalLogger {
       ? `${this.prefix} ${message} ${JSON.stringify(data)}\n`
       : `${this.prefix} ${message}\n`;
 
-    if (typeof process !== 'undefined' && process.stdout) {
-      process.stdout.write(output);
-    } else {
-      console.info(output.trim());
-    }
+    createDefaultOutput('localhost').write(output);
   }
 }
 

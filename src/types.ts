@@ -17,6 +17,10 @@ export type LogData =
   | Error
   | Date;
 
+export type BrowserConsoleMode = 'localhost' | 'always' | 'never';
+
+export type LoggerOutput = NodeJS.WritableStream | { write: (chunk: string) => unknown };
+
 export enum ConfidenceLevel {
   LOW = 0,
   MEDIUM = 1,
@@ -167,7 +171,9 @@ export interface LoggerConfig {
 
   json?: boolean;
 
-  output?: NodeJS.WritableStream | { write: (chunk: string) => void };
+  output?: LoggerOutput;
+
+  browserConsole?: BrowserConsoleMode;
 
   ai?: Partial<AIConfig>;
 }

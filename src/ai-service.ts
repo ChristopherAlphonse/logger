@@ -156,7 +156,7 @@ export class AIService implements IAIService {
           return true;
 
         case 'openai':
-          if (!this.openai || !this.openai.models) return false;
+          if (!this.openai?.models) return false;
           await this.openai.models.list();
           return true;
 
@@ -187,6 +187,11 @@ export class AIService implements IAIService {
       }
     }
 
+    if (!this.checkRateLimit()) {
+      internalLogger.warn('AI rate limit exceeded, using basic insights');
+      return this.generateBasicInsight(error, this.detectFramework([], error.message) || 'unknown');
+    }
+
     const insight = await this.generateInsight(error, context);
     insight.processingTime = Date.now() - startTime;
 
@@ -215,6 +220,12 @@ export class AIService implements IAIService {
     }
 
     const framework = this.detectFramework(stackTrace, '');
+
+    if (!this.checkRateLimit()) {
+      internalLogger.warn('AI rate limit exceeded, using basic stack trace insights');
+      return this.generateBasicInsight(new Error('Stack trace analysis'), framework);
+    }
+
     const insight = await this.generateStackTraceInsight(stackTrace, framework, context);
     insight.processingTime = Date.now() - startTime;
 
@@ -624,6 +635,11 @@ Provide analysis in JSON format.`;
     }
 
     if (!config.translateLogLevels.includes(level)) {
+      return message;
+    }
+
+    if (!this.checkRateLimit()) {
+      internalLogger.warn('AI rate limit exceeded, using original log message');
       return message;
     }
 

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-08-17
+
+### Added
+
+- Added `browserConsole` configuration for browser output control:
+  - `localhost` logs only on local browser hosts (default)
+  - `always` opts into browser console output on any host
+  - `never` disables default browser console output
+
+### Changed
+
+- Suppressed default browser console output on non-localhost production hosts unless explicitly overridden.
+- Centralized default output handling across logger and internal diagnostics.
+- Enforced configured AI rate limits before external provider calls.
+
 ## [1.2.1] - 2026-08-17
 
 ### Changed

@@ -17,6 +17,7 @@
 - **Beautiful colored output** with timestamps and file locations
 - **AI-powered error analysis** with intelligent insights and fix suggestions
 - **Structured JSON logging** for production environments
+- **Browser-safe defaults** that suppress console output on non-localhost web hosts
 - **Security hardened** with input validation and sanitization
 - **TypeScript first** with full type safety
 - **Zero dependencies** for core functionality (AI features optional)
@@ -88,6 +89,7 @@ const logger = new Logger({
   showSource: true,
   prefix: '[MY-APP]',
   json: false, // Set to true for production
+  browserConsole: 'localhost', // 'localhost' | 'always' | 'never'
   ai: {
     enabled: true,
     provider: 'ollama', // 'openai' | 'claude' | 'disabled'
@@ -95,6 +97,21 @@ const logger = new Logger({
   },
 });
 ```
+
+### Browser Production Console Policy
+
+When no custom `output` stream is provided, browser console output is enabled only on
+`localhost`, `127.0.0.1`, `0.0.0.0`, `::1`, or `*.localhost`. Production web hosts
+silently no-op by default so bundled apps do not write to Chrome DevTools unless you
+explicitly opt in:
+
+```typescript
+const logger = new Logger({
+  browserConsole: 'always', // override for production browser diagnostics
+});
+```
+
+Passing a custom `output` stream always takes precedence.
 
 ## Factory Methods
 

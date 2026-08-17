@@ -15,28 +15,29 @@ declare const window:
       localStorage?: Storage;
     }
   | undefined;
-declare const localStorage: Storage | undefined;
+
+function getBrowserLocalStorage(): Storage | undefined {
+  if (typeof window === 'undefined') {
+    return undefined;
+  }
+
+  return window.localStorage;
+}
+
+function getStorageKey(path: string): string {
+  return `logger-config-${path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+}
 
 const browserFS = {
   readFileSync: (path: string, _encoding: string) => {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const key = `logger-config-${path.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      return localStorage?.getItem(key) || '{}';
-    }
-    return '{}';
+    return getBrowserLocalStorage()?.getItem(getStorageKey(path)) || '{}';
   },
   writeFileSync: (path: string, data: string, _encoding: string) => {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const key = `logger-config-${path.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      localStorage?.setItem(key, data);
-    }
+    getBrowserLocalStorage()?.setItem(getStorageKey(path), data);
   },
   existsSync: (path: string) => {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const key = `logger-config-${path.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      return localStorage?.getItem(key) !== null;
-    }
-    return false;
+    const storage = getBrowserLocalStorage();
+    return storage ? storage.getItem(getStorageKey(path)) !== null : false;
   },
 };
 
