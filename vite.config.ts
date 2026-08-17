@@ -5,7 +5,7 @@ import dts from 'vite-plugin-dts';
 export default defineConfig({
   build: {
     lib: {
-      entry: resolve(__dirname, 'dist/index.js'),
+      entry: resolve(import.meta.dirname, 'src/index.ts'),
       name: 'Logger',
       fileName: (format) => (format === 'es' ? 'index.es.js' : 'index.cjs'),
       formats: ['es', 'cjs'],

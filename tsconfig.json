@@ -9,7 +9,7 @@
     "lib": ["ES2020"],
     "module": "ESNext",
     "moduleDetection": "force",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "noEmit": false,
     "outDir": "./dist",
     "resolveJsonModule": true,
