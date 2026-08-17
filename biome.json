@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.8/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -7,21 +7,22 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "ignore": [
-      "node_modules/**",
-      "dist/**",
-      "coverage/**",
-      "*.min.js",
-      "*.bundle.js"
+    "includes": [
+      "**",
+      "!node_modules",
+      "!dist",
+      "!coverage",
+      "!*.min.js",
+      "!*.bundle.js"
     ]
   },
   "overrides": [
     {
-      "include": ["examples/**"],
+      "includes": ["examples/**"],
       "linter": {
         "rules": {
           "suspicious": {
-            "noConsoleLog": "off",
+            "noConsole": "off",
             "noExplicitAny": "off"
           }
         }
@@ -38,19 +39,18 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "correctness": {
         "noUnusedVariables": "error",
         "noUnusedImports": "error"
       },
       "suspicious": {
         "noExplicitAny": "warn",
-        "noConsoleLog": "warn"
+        "noConsole": "warn"
       },
       "style": {
         "useConst": "error",
-        "useTemplate": "error",
-        
+        "useTemplate": "error"
       },
       "complexity": {
         "noExcessiveCognitiveComplexity": "warn"
