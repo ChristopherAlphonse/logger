@@ -30,7 +30,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 24.11.0
           registry-url: 'https://registry.npmjs.org'
 
       - name: Setup pnpm
@@ -47,7 +47,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Run semantic-release in dry-run mode to analyze what would happen
-          npx semantic-release --dry-run > release-analysis.txt 2>&1 || true
+          npx semantic-release --dry-run > release-analysis.txt 2>&1
 
           # Parse the output to determine release type
           if grep -q "Published release" release-analysis.txt; then
@@ -86,7 +86,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 24.11.0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -152,7 +152,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 24.11.0
           registry-url: 'https://registry.npmjs.org'
 
       - name: Setup pnpm
@@ -190,7 +190,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 24.11.0
           registry-url: 'https://registry.npmjs.org'
 
       - name: Setup pnpm

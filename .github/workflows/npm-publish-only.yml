@@ -30,6 +30,10 @@ on:
         required: true
         default: false
         type: boolean
+      otp:
+        description: 'Optional npm one-time password for token-based publishes'
+        required: false
+        type: string
   release:
     types: [published]
 
@@ -83,6 +87,7 @@ jobs:
       NPM_DIST_TAG: ${{ inputs.dist_tag || 'latest' }}
       DRY_RUN: ${{ inputs.dry_run || 'false' }}
       NPM_AUTH_MODE: ${{ inputs.auth_mode || 'trusted-publishing' }}
+      NPM_OTP: ${{ inputs.otp || '' }}
     steps:
       - name: Checkout release tag
         uses: actions/checkout@v4
@@ -162,6 +167,7 @@ jobs:
         if: steps.version.outputs.already-published != 'true' && env.NPM_AUTH_MODE == 'trusted-publishing'
         run: |
           set -euo pipefail
+          unset NODE_AUTH_TOKEN
 
           if [ "$DRY_RUN" = "true" ]; then
             npm publish "${{ steps.pack.outputs.tarball }}" \
@@ -171,8 +177,7 @@ jobs:
           else
             npm publish "${{ steps.pack.outputs.tarball }}" \
               --access public \
-              --tag "$NPM_DIST_TAG" \
-              --provenance
+              --tag "$NPM_DIST_TAG"
           fi
 
       - name: Publish to npm with token
@@ -181,17 +186,21 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
+          publish_args=(
+            "${{ steps.pack.outputs.tarball }}"
+            --access public
+            --tag "$NPM_DIST_TAG"
+            --provenance
+          )
+
+          if [ -n "$NPM_OTP" ]; then
+            publish_args+=(--otp "$NPM_OTP")
+          fi
 
           if [ "$DRY_RUN" = "true" ]; then
-            npm publish "${{ steps.pack.outputs.tarball }}" \
-              --access public \
-              --tag "$NPM_DIST_TAG" \
-              --dry-run
+            npm publish "${publish_args[@]}" --dry-run
           else
-            npm publish "${{ steps.pack.outputs.tarball }}" \
-              --access public \
-              --tag "$NPM_DIST_TAG" \
-              --provenance
+            npm publish "${publish_args[@]}"
           fi
 
       - name: Summary
@@ -205,4 +214,5 @@ jobs:
             echo "- Auth mode: \`$NPM_AUTH_MODE\`"
             echo "- Dry run: \`$DRY_RUN\`"
             echo "- Already published: \`${{ steps.version.outputs.already-published }}\`"
+            echo "- OTP supplied: \`${{ env.NPM_OTP != '' }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
